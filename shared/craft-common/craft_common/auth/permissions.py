@@ -1,0 +1,44 @@
+from functools import wraps
+from rest_framework.permissions import BasePermission
+from rest_framework.exceptions import PermissionDenied
+import logging
+
+logger = logging.getLogger(__name__)
+
+class HasRole(BasePermission):
+    """
+    Allows access only to users with a specific role.
+    Assumes the API Gateway has validated the JWT and injected the 'X-User-Roles' header.
+    """
+    def __init__(self, required_role: str):
+        self.required_role = required_role
+
+    def has_permission(self, request, view):
+        roles_header = request.headers.get('X-User-Roles', '')
+        roles = [role.strip() for role in roles_header.split(',') if role.strip()]
+        
+        if self.required_role in roles:
+            return True
+            
+        logger.warning(f"Access denied for user {request.headers.get('X-User-ID')}. Required role: {self.required_role}, Found: {roles}")
+        return False
+        
+    def __call__(self, *args, **kwargs):
+        return self
+
+def require_role(role_name: str):
+    """
+    Decorator for function-based views to require a specific role.
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        def _wrapped_view(request, *args, **kwargs):
+            roles_header = request.headers.get('X-User-Roles', '')
+            roles = [role.strip() for role in roles_header.split(',') if role.strip()]
+            
+            if role_name not in roles:
+                raise PermissionDenied(f"You do not have the required role: {role_name}")
+                
+            return view_func(request, *args, **kwargs)
+        return _wrapped_view
+    return decorator
