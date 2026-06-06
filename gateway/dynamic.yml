@@ -1,0 +1,153 @@
+http:
+  middlewares:
+    cors-headers:
+      headers:
+        accessControlAllowMethods:
+          - "GET"
+          - "POST"
+          - "PUT"
+          - "PATCH"
+          - "DELETE"
+          - "OPTIONS"
+        accessControlAllowHeaders:
+          - "*"
+        accessControlAllowOriginList:
+          - "http://localhost:8000"
+          - "https://craft.up.railway.app"
+          - "https://crafteg.up.railway.app"
+        accessControlMaxAge: 100
+        addVaryHeader: true
+    rate-limit-anon:
+      rateLimit:
+        average: 10
+        burst: 20
+    rate-limit-user:
+      rateLimit:
+        average: 100
+        burst: 200
+
+  routers:
+    monolith_router:
+      rule: "PathPrefix(`/`)"
+      service: monolith_service
+      entryPoints:
+        - web
+      middlewares:
+        - cors-headers
+        - rate-limit-anon # Apply anon limit by default; user limit can be added to specific routers later
+
+    health_router:
+      rule: "PathPrefix(`/health/`)"
+      service: monolith_service # For now, points to monolith. Later can point to an aggregator
+      entryPoints:
+        - web
+
+    realtime_router:
+      rule: "PathPrefix(`/chat/`) || PathPrefix(`/notifications/`) || PathPrefix(`/ws/`)"
+      service: realtime_service
+      entryPoints:
+        - web
+      middlewares:
+        - cors-headers
+
+    auth_router:
+      rule: "PathPrefix(`/accounts/`) || PathPrefix(`/auth/`)"
+      service: auth_service
+      entryPoints:
+        - web
+      middlewares:
+        - cors-headers
+
+    catalog_router:
+      rule: "PathPrefix(`/product/`) || PathPrefix(`/course/`)"
+      service: catalog_service
+      entryPoints:
+        - web
+      middlewares:
+        - cors-headers
+
+    order_router:
+      rule: "PathPrefix(`/order/`) || PathPrefix(`/cart/`) || PathPrefix(`/return/`)"
+      service: order_service
+      entryPoints:
+        - web
+      middlewares:
+        - cors-headers
+
+    payment_router:
+      rule: "PathPrefix(`/payment/`)"
+      service: payment_service
+      entryPoints:
+        - web
+      middlewares:
+        - cors-headers
+
+    platform_router:
+      rule: "PathPrefix(`/review/`) || PathPrefix(`/disputes/`) || PathPrefix(`/support/`) || PathPrefix(`/audit/`)"
+      service: platform_service
+      entryPoints:
+        - web
+      middlewares:
+        - cors-headers
+
+    ml_router:
+      rule: "PathPrefix(`/recommendations/`)"
+      service: ml_service
+      entryPoints:
+        - web
+      middlewares:
+        - cors-headers
+
+    reporting_router:
+      rule: "PathPrefix(`/reports/`) || PathPrefix(`/admin-api/`)"
+      service: reporting_service
+      entryPoints:
+        - web
+      middlewares:
+        - cors-headers
+
+  services:
+    monolith_service:
+      loadBalancer:
+        servers:
+          - url: "http://django:8000"
+
+    realtime_service:
+      loadBalancer:
+        servers:
+          - url: "http://realtime_service:8008"
+
+    auth_service:
+      loadBalancer:
+        servers:
+          - url: "http://auth_service:8001"
+
+    catalog_service:
+      loadBalancer:
+        servers:
+          - url: "http://catalog_service:8002"
+
+    order_service:
+      loadBalancer:
+        servers:
+          - url: "http://order_service:8003"
+
+    payment_service:
+      loadBalancer:
+        servers:
+          - url: "http://payment_service:8004"
+
+    platform_service:
+      loadBalancer:
+        servers:
+          - url: "http://platform_service:8005"
+
+    ml_service:
+      loadBalancer:
+        servers:
+          - url: "http://ml_service:8006"
+
+    reporting_service:
+      loadBalancer:
+        servers:
+          - url: "http://reporting_service:8007"
