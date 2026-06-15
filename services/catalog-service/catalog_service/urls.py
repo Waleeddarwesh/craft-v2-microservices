@@ -13,6 +13,6 @@ urlpatterns = [
     path("admin-api/", include("products.admin_urls")),
     path("admin-api/", include("course.admin_urls")),
     path("health/", HealthCheckView.as_view(), name="health_check"),
-    path('product/api/schema/", SpectacularAPIView.as_view(), name="schema"),
-    path('product/api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+    path('product/api/schema/', SpectacularAPIView.as_view(), name="schema"),
+    path('product/api/docs/', SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
