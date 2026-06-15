@@ -11,5 +11,12 @@ setup(
         "pika>=1.3.2",
         "pydantic>=2.0.0",
         "cryptography>=41.0.0",
+        "deep-translator>=1.11.4",
+        "drf-spectacular>=0.26.0",
+        "opentelemetry-api>=1.20.0",
+        "opentelemetry-sdk>=1.20.0",
+        "opentelemetry-instrumentation-django>=0.41b0",
+        "opentelemetry-instrumentation-requests>=0.41b0",
+        "opentelemetry-exporter-otlp>=1.20.0",
     ],
 )

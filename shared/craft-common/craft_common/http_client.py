@@ -41,6 +41,8 @@ class InternalHTTPClient:
             req_headers['X-Request-ID'] = request_id
         if jwt_token:
             req_headers['Authorization'] = f"Bearer {jwt_token}"
+        req_headers['X-Internal-Secret'] = 'super-secret-internal-key'
+        req_headers['Host'] = 'internal-service'
         return req_headers
 
     def _check_circuit(self):
@@ -94,6 +96,8 @@ class InternalHTTPClient:
             req_headers['X-Request-ID'] = request_id
         if jwt_token:
             req_headers['Authorization'] = f"Bearer {jwt_token}"
+        req_headers['X-Internal-Secret'] = 'super-secret-internal-key'
+        req_headers['Host'] = 'internal-service'
         return req_headers
 
     def get(self, path: str, params: Optional[Dict[str, Any]] = None, 
