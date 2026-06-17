@@ -69,6 +69,8 @@ services:
       context: ./services/admin-service
       dockerfile: Dockerfile
     environment:
+      - OTEL_SERVICE_NAME=admin_service
+      - DJANGO_SETTINGS_MODULE=Handcrafts.settings
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       - ENVIRONMENT=production
       - REDIS_URL=redis://redis:6379/0
@@ -91,6 +93,9 @@ services:
       dockerfile: ./services/auth-service/Dockerfile
     ports:
       - "8001:8001"
+    environment:
+      - OTEL_SERVICE_NAME=auth_service
+      - DJANGO_SETTINGS_MODULE=auth_service.settings
     env_file:
       - .env
     depends_on:
@@ -108,6 +113,9 @@ services:
       dockerfile: ./services/catalog-service/Dockerfile
     ports:
       - "8002:8002"
+    environment:
+      - OTEL_SERVICE_NAME=catalog_service
+      - DJANGO_SETTINGS_MODULE=catalog_service.settings
     env_file:
       - .env
     depends_on:
@@ -125,6 +133,9 @@ services:
       dockerfile: ./services/order-service/Dockerfile
     ports:
       - "8003:8003"
+    environment:
+      - OTEL_SERVICE_NAME=order_service
+      - DJANGO_SETTINGS_MODULE=order_service.settings
     env_file:
       - .env
     depends_on:
@@ -142,6 +153,9 @@ services:
       dockerfile: ./services/payment-service/Dockerfile
     ports:
       - "8004:8004"
+    environment:
+      - OTEL_SERVICE_NAME=payment_service
+      - DJANGO_SETTINGS_MODULE=payment_service.settings
     env_file:
       - .env
     depends_on:
@@ -159,6 +173,9 @@ services:
       dockerfile: ./services/platform-service/Dockerfile
     ports:
       - "8005:8005"
+    environment:
+      - OTEL_SERVICE_NAME=platform_service
+      - DJANGO_SETTINGS_MODULE=platform_service.settings
     env_file:
       - .env
     depends_on:
@@ -176,6 +193,8 @@ services:
       dockerfile: ./services/ml-service/Dockerfile
     ports:
       - "8006:8006"
+    environment:
+      - OTEL_SERVICE_NAME=ml_service
     env_file:
       - .env
     depends_on:
@@ -193,6 +212,9 @@ services:
       dockerfile: ./services/reporting-service/Dockerfile
     ports:
       - "8007:8007"
+    environment:
+      - OTEL_SERVICE_NAME=reporting_service
+      - DJANGO_SETTINGS_MODULE=reporting_service.settings
     env_file:
       - .env
     depends_on:
@@ -206,6 +228,8 @@ services:
       dockerfile: ./services/realtime-service/Dockerfile
     ports:
       - "8008:8008"
+    environment:
+      - OTEL_SERVICE_NAME=realtime_service
     env_file:
       - .env
     depends_on:

@@ -3,6 +3,7 @@ version: '3.8'
 services:
   prometheus:
     image: prom/prometheus:v2.45.0
+    restart: unless-stopped
     ports:
       - "9090:9090"
     volumes:
@@ -10,10 +11,13 @@ services:
 
   grafana:
     image: grafana/grafana:10.0.3
+    restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning
     depends_on:
       - prometheus
       - loki
@@ -21,6 +25,7 @@ services:
 
   jaeger:
     image: jaegertracing/all-in-one:1.47
+    restart: unless-stopped
     ports:
       - "16686:16686"
       - "4317:4317" # OTLP gRPC
@@ -28,15 +33,77 @@ services:
 
   loki:
     image: grafana/loki:2.8.2
+    restart: unless-stopped
     ports:
       - "3100:3100"
     command: -config.file=/etc/loki/local-config.yaml
 
   promtail:
     image: grafana/promtail:2.8.2
+    restart: unless-stopped
     volumes:
       - /var/log:/var/log
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
     command: -config.file=/etc/promtail/config.yml
     depends_on:
       - loki
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.2
+    restart: unless-stopped
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    ports:
+      - "8082:8080"
+
+  node-exporter:
+    image: prom/node-exporter:v1.6.1
+    restart: unless-stopped
+    ports:
+      - "9100:9100"
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.13.0
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: "postgresql://craft_user:craft_password@postgres:5432/craft_db?sslmode=disable"
+    ports:
+      - "9187:9187"
+    depends_on:
+      - prometheus
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.54.0
+    restart: unless-stopped
+    environment:
+      REDIS_ADDR: "redis://redis:6379"
+    ports:
+      - "9121:9121"
+    depends_on:
+      - prometheus
+
+  rabbitmq-exporter:
+    image: kbudde/rabbitmq-exporter:latest
+    restart: unless-stopped
+    environment:
+      RABBIT_URL: "http://rabbitmq:15672"
+      RABBIT_USER: "guest"
+      RABBIT_PASSWORD: "guest"
+    ports:
+      - "9419:9419"
+    depends_on:
+      - prometheus
+
+  alertmanager:
+    image: prom/alertmanager:v0.26.0
+    restart: unless-stopped
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./infra/prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
