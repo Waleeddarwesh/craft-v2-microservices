@@ -1,13 +1,13 @@
 const ApiDocsPage = (() => {
     async function render(container) {
-        container.innerHTML = 
+        container.innerHTML = `
             <div class="page-header">
                 <div><h1></h1><p></p></div>
             </div>
             <div class="card p-0" style="min-height: 80vh; background: white;">
                 <div id="swagger-ui"></div>
             </div>
-        ;
+        `;
 
         if (!document.getElementById('swagger-ui-css')) {
             const link = document.createElement('link');
@@ -20,11 +20,11 @@ const ApiDocsPage = (() => {
         if (!document.getElementById('swagger-ui-custom-css')) {
             const style = document.createElement('style');
             style.id = 'swagger-ui-custom-css';
-            style.innerHTML = 
+            style.innerHTML = `
                 .swagger-ui .wrapper { padding: 0; max-width: 100%; }
                 .swagger-ui .info { margin: 20px 0; }
                 .swagger-ui .scheme-container { background: transparent; padding: 10px 0; margin-bottom: 20px; box-shadow: none; border-bottom: 1px solid var(--clr-surface-border); }
-            ;
+            `;
             document.head.appendChild(style);
         }
 

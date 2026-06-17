@@ -2,10 +2,10 @@
 const OverviewPage = (() => {
     async function render(container) {
         const widgets = window.UserIdentity ? window.UserIdentity.widgets : [];
-        
+
         const hasRevenueChart = widgets.includes('revenue_chart');
         const hasStatusChart = widgets.includes('status_chart');
-        
+
         let chartsHtml = '';
         if (hasRevenueChart || hasStatusChart) {
             chartsHtml += '<div class="overview-charts">';
@@ -56,33 +56,33 @@ const OverviewPage = (() => {
                     .overview-bottom { grid-template-columns: 1fr !important; }
                 }
             </style>`;
-        
+
         loadStats();
         loadCharts();
         loadRecentOrders();
         loadRecentActivity();
         loadTopProducts();
         loadPendingReturns();
-        
+
         startAutoRefresh();
     }
-    
+
     let refreshTimer = null;
     let refreshSeconds = 60;
-    
+
     function startAutoRefresh() {
         if (refreshTimer) clearInterval(refreshTimer);
         refreshSeconds = 60;
-        
+
         refreshTimer = setInterval(() => {
             refreshSeconds--;
             const indicator = document.getElementById('refresh-countdown');
             if (indicator) indicator.textContent = `${window.t('Refreshing in')} ${refreshSeconds}s`;
-            
+
             if (refreshSeconds <= 0) {
                 refreshSeconds = 60;
                 if (indicator) indicator.textContent = window.t('Refreshing...');
-                
+
                 // Silently reload data
                 Promise.all([
                     loadStats(), loadCharts(), loadRecentOrders(),
@@ -93,7 +93,7 @@ const OverviewPage = (() => {
             }
         }, 1000);
     }
-    
+
     function stopAutoRefresh() {
         if (refreshTimer) {
             clearInterval(refreshTimer);
@@ -124,7 +124,7 @@ const OverviewPage = (() => {
             if (widgets.includes('pending_returns')) html += StatsCard.render(window.t('Pending Returns'), stats.pending_returns || 0, icons.returns, 'warning');
             if (widgets.includes('products_in_stock')) html += StatsCard.render(window.t('Products In Stock'), stats.products_in_stock || 0, icons.products, 'success');
             if (widgets.includes('pending_withdrawals')) html += StatsCard.render(window.t('Pending Withdrawals'), stats.pending_withdrawals || 0, icons.withdrawals, 'danger');
-            
+
             document.getElementById('overview-stats').innerHTML = html;
             Sidebar.updateBadge('pending_returns', stats.pending_returns || 0);
             Sidebar.updateBadge('pending_withdrawals', stats.pending_withdrawals || 0);
@@ -137,15 +137,15 @@ const OverviewPage = (() => {
         try {
             const data = await API.get('/admin-api/charts/');
             if (data && data.revenue_labels) {
-                if(document.getElementById('chart-revenue')) Charts.line('chart-revenue', data.revenue_labels, [{ label: 'Revenue', data: data.revenue_data }]);
-                if(document.getElementById('chart-orders-status')) Charts.doughnut('chart-orders-status', (data.status_labels || ['Created','Delivered','Cancelled']).map(l => window.t(l)), data.status_data || [0,0,0]);
+                if (document.getElementById('chart-revenue')) Charts.line('chart-revenue', data.revenue_labels, [{ label: 'Revenue', data: data.revenue_data }]);
+                if (document.getElementById('chart-orders-status')) Charts.doughnut('chart-orders-status', (data.status_labels || ['Created', 'Delivered', 'Cancelled']).map(l => window.t(l)), data.status_data || [0, 0, 0]);
             } else {
-                if(document.getElementById('chart-revenue')) Charts.line('chart-revenue', ['Jan','Feb','Mar','Apr','May'], [{ label: 'Revenue', data: [0,0,0,0,0] }]);
-                if(document.getElementById('chart-orders-status')) Charts.doughnut('chart-orders-status', [window.t('No Data')], [1]);
+                if (document.getElementById('chart-revenue')) Charts.line('chart-revenue', ['Jan', 'Feb', 'Mar', 'Apr', 'May'], [{ label: 'Revenue', data: [0, 0, 0, 0, 0] }]);
+                if (document.getElementById('chart-orders-status')) Charts.doughnut('chart-orders-status', [window.t('No Data')], [1]);
             }
         } catch {
-            if(document.getElementById('chart-revenue')) Charts.line('chart-revenue', ['Jan','Feb','Mar','Apr','May'], [{ label: 'Revenue', data: [0,0,0,0,0] }]);
-            if(document.getElementById('chart-orders-status')) Charts.doughnut('chart-orders-status', [window.t('No Data')], [1]);
+            if (document.getElementById('chart-revenue')) Charts.line('chart-revenue', ['Jan', 'Feb', 'Mar', 'Apr', 'May'], [{ label: 'Revenue', data: [0, 0, 0, 0, 0] }]);
+            if (document.getElementById('chart-orders-status')) Charts.doughnut('chart-orders-status', [window.t('No Data')], [1]);
         }
     }
 
@@ -154,16 +154,18 @@ const OverviewPage = (() => {
             const orders = await API.get('/admin-api/orders/');
             const recent = (orders || []).slice(0, 5);
             const el = document.getElementById('recent-orders-table'); if (!el) return;
-            if (recent.length === 0) { el.innerHTML = `<div class="empty-state" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px 0;">
+            if (recent.length === 0) {
+                el.innerHTML = `<div class="empty-state" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px 0;">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="color:var(--clr-border);margin-bottom:12px;">
                     <circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>
                 </svg>
                 <h3 style="margin-bottom:4px;color:var(--clr-text);font-size:var(--fs-md);font-weight:var(--fw-semibold);">No orders yet</h3>
                 <p style="color:var(--clr-text-muted);font-size:var(--fs-xs);">When users place orders, they will appear here.</p>
-            </div>`; return; }
+            </div>`; return;
+            }
             el.innerHTML = `<table class="data-table"><thead><tr><th>${window.t('Order #')}</th><th>${window.t('Customer')}</th><th>${window.t('Status')}</th><th>${window.t('Amount')}</th></tr></thead><tbody>` +
                 recent.map(o => `<tr>
-                    <td style="font-family:var(--font-mono);font-size:var(--fs-xs)">${o.order_number || o.id?.slice(0,8)}</td>
+                    <td style="font-family:var(--font-mono);font-size:var(--fs-xs)">${o.order_number || o.id?.slice(0, 8)}</td>
                     <td style="font-size:var(--fs-xs)">${o.user_email || '—'}</td>
                     <td>${statusBadge(o.status)}</td>
                     <td>EGP ${parseFloat(o.final_amount || o.total_amount || 0).toLocaleString()}</td>
@@ -176,15 +178,17 @@ const OverviewPage = (() => {
         try {
             const logs = await API.get('/admin-api/recent-activity/');
             const el = document.getElementById('recent-activity-list'); if (!el) return;
-            if (!logs || logs.length === 0) { el.innerHTML = `<div class="empty-state" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px 0;">
+            if (!logs || logs.length === 0) {
+                el.innerHTML = `<div class="empty-state" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px 0;">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="color:var(--clr-border);margin-bottom:12px;">
                     <circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>
                 </svg>
                 <h3 style="margin-bottom:4px;color:var(--clr-text);font-size:var(--fs-md);font-weight:var(--fw-semibold);">No recent activity</h3>
                 <p style="color:var(--clr-text-muted);font-size:var(--fs-xs);">System logs and activities will appear here.</p>
-            </div>`; return; }
+            </div>`; return;
+            }
             el.innerHTML = logs.map(l => {
-                const date = new Date(l.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const date = new Date(l.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 return `<div style="display:flex; gap:12px; padding:var(--space-3) 0; border-bottom:1px solid var(--clr-surface-border)">
                     <div style="width:8px; height:8px; border-radius:50%; background:var(--clr-primary); margin-top:6px;"></div>
                     <div style="flex:1;">
@@ -205,13 +209,15 @@ const OverviewPage = (() => {
         try {
             const products = await API.get('/admin-api/top-products/');
             const el = document.getElementById('top-products-table'); if (!el) return;
-            if (!products || products.length === 0) { el.innerHTML = `<div class="empty-state" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px 0;">
+            if (!products || products.length === 0) {
+                el.innerHTML = `<div class="empty-state" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px 0;">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="color:var(--clr-border);margin-bottom:12px;">
                     <circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>
                 </svg>
                 <h3 style="margin-bottom:4px;color:var(--clr-text);font-size:var(--fs-md);font-weight:var(--fw-semibold);">No product data</h3>
                 <p style="color:var(--clr-text-muted);font-size:var(--fs-xs);">Top selling products will be listed here.</p>
-            </div>`; return; }
+            </div>`; return;
+            }
             el.innerHTML = `<table class="data-table"><thead><tr><th>${window.t('Product')}</th><th>${window.t('Units Sold')}</th><th>${window.t('Revenue')}</th></tr></thead><tbody>` +
                 products.map(p => `<tr onclick="window.location.hash='products'" style="cursor:pointer" title="${window.t('View Product')}">
                     <td>
@@ -232,13 +238,15 @@ const OverviewPage = (() => {
             const data = await API.get('/admin-api/returns/');
             const returns = (data || []).filter(r => r.status === 'new').slice(0, 5);
             const el = document.getElementById('pending-returns-list'); if (!el) return;
-            if (returns.length === 0) { el.innerHTML = `<div class="empty-state" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px 0;">
+            if (returns.length === 0) {
+                el.innerHTML = `<div class="empty-state" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px 0;">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="color:var(--clr-success);margin-bottom:12px;">
                     <circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>
                 </svg>
                 <h3 style="margin-bottom:4px;color:var(--clr-text);font-size:var(--fs-md);font-weight:var(--fw-semibold);">No pending returns</h3>
                 <p style="color:var(--clr-text-muted);font-size:var(--fs-xs);">All caught up on return requests. Great job!</p>
-            </div>`; return; }
+            </div>`; return;
+            }
             el.innerHTML = returns.map(r => `<div style="display:flex;justify-content:space-between;align-items:center;padding:var(--space-3) 0;border-bottom:1px solid var(--clr-surface-border)">
                 <div><div style="font-size:var(--fs-sm);font-weight:var(--fw-medium)">${r.product_name || window.t('Product')}</div><div style="font-size:var(--fs-xs);color:var(--clr-text-muted)">${r.reason || ''}</div></div>
                 <span class="badge badge-warning">EGP ${parseFloat(r.amount || 0).toFixed(2)}</span>
