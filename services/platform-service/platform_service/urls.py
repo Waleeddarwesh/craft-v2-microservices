@@ -20,6 +20,7 @@ from django.contrib import admin
 from django.urls import path, include
 
 urlpatterns = [
+    path('', include('django_prometheus.urls')),
     path('admin/platform/', admin.site.urls),
     path('disputes/', include('disputes.urls')),
     path('review/', include('reviews.urls')),

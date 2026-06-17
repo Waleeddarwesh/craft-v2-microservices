@@ -40,6 +40,7 @@ CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=['http://localho
 # Application definition
 
 INSTALLED_APPS = [
+    'django_prometheus',
     'admin_interface',
     'colorfield',
     'django.contrib.admin',
@@ -60,6 +61,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'craft_common.middleware.fix_host.BypassHostCheckMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -69,6 +71,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django_prometheus.middleware.PrometheusAfterMiddleware',
 ]
 
 ROOT_URLCONF = 'reporting_service.urls'
@@ -179,3 +182,7 @@ AUTH_USER_MODEL = 'accounts.User'
 SPECTACULAR_SETTINGS = {
     'SERVE_PERMISSIONS': ['rest_framework.permissions.IsAuthenticated'],
 }
+
+# Enable django-prometheus DB metrics
+if 'default' in DATABASES:
+    DATABASES['default']['ENGINE'] = 'django_prometheus.db.backends.postgresql'

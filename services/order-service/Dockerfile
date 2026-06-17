@@ -21,4 +21,4 @@ COPY services/order-service/ .
 # Command to run the application
 RUN python manage.py collectstatic --noinput
 
-CMD ["gunicorn", "order_service.wsgi:application", "--bind", "0.0.0.0:8003", "--workers", "3"]
+CMD ["opentelemetry-instrument", "gunicorn", "order_service.wsgi:application", "--bind", "0.0.0.0:8003", "--workers", "3"]

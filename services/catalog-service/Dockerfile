@@ -23,4 +23,4 @@ COPY services/catalog-service/ .
 # Command to run the application
 RUN python manage.py collectstatic --noinput
 
-CMD ["gunicorn", "catalog_service.wsgi:application", "--bind", "0.0.0.0:8002", "--workers", "3"]
+CMD ["opentelemetry-instrument", "gunicorn", "catalog_service.wsgi:application", "--bind", "0.0.0.0:8002", "--workers", "3"]

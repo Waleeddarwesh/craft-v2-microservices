@@ -6,6 +6,10 @@ from consumer import start_consumer
 
 app = FastAPI(title="Real-Time Service")
 
+from prometheus_fastapi_instrumentator import Instrumentator
+Instrumentator().instrument(app).expose(app)
+
+
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(start_consumer())

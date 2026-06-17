@@ -20,6 +20,7 @@ from django.contrib import admin
 from django.urls import path, include
 
 urlpatterns = [
+    path('', include('django_prometheus.urls')),
     path('admin/payment/', admin.site.urls),
     path('internal/payments/', include('payment.internal_urls')),
     path('payment/', include('payment.urls')),

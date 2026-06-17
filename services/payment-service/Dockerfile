@@ -21,4 +21,4 @@ COPY services/payment-service/ .
 # Command to run the application
 RUN python manage.py collectstatic --noinput
 
-CMD ["gunicorn", "payment_service.wsgi:application", "--bind", "0.0.0.0:8004", "--workers", "3"]
+CMD ["opentelemetry-instrument", "gunicorn", "payment_service.wsgi:application", "--bind", "0.0.0.0:8004", "--workers", "3"]

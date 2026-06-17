@@ -19,6 +19,10 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="ML Service", version="1.0", lifespan=lifespan)
 
+from prometheus_fastapi_instrumentator import Instrumentator
+Instrumentator().instrument(app).expose(app)
+
+
 @app.get("/health")
 def health_check():
     return {"status": "ok"}

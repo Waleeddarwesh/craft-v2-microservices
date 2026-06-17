@@ -21,4 +21,4 @@ COPY services/reporting-service/ .
 # Command to run the application
 RUN python manage.py collectstatic --noinput
 
-CMD ["gunicorn", "reporting_service.wsgi:application", "--bind", "0.0.0.0:8007", "--workers", "3"]
+CMD ["opentelemetry-instrument", "gunicorn", "reporting_service.wsgi:application", "--bind", "0.0.0.0:8007", "--workers", "3"]

@@ -21,4 +21,4 @@ COPY services/auth-service/ .
 # Command to run the application
 RUN python manage.py collectstatic --noinput
 
-CMD ["gunicorn", "auth_service.wsgi:application", "--bind", "0.0.0.0:8001", "--workers", "3"]
+CMD ["opentelemetry-instrument", "gunicorn", "auth_service.wsgi:application", "--bind", "0.0.0.0:8001", "--workers", "3"]

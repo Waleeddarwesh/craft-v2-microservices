@@ -7,4 +7,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY services/ml-service/ .
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8006"]
+CMD ["opentelemetry-instrument", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8006"]

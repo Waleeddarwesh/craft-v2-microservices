@@ -6,6 +6,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
+    path('', include('django_prometheus.urls')),
     path("admin/catalog/", admin.site.urls),
     path("product/", include("products.urls")),
     path("course/", include("course.urls")),

@@ -23,6 +23,7 @@ ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['*'])
 CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=['http://localhost:8000', 'http://localhost:3000', 'http://127.0.0.1:3000'])
 
 INSTALLED_APPS = [
+    'django_prometheus',
     'admin_interface',
     'colorfield',
     'django.contrib.admin',
@@ -46,6 +47,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'craft_common.middleware.request_id.RequestIDMiddleware',
     'craft_common.middleware.fix_host.BypassHostCheckMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -57,6 +59,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django_prometheus.middleware.PrometheusAfterMiddleware',
 ]
 
 ROOT_URLCONF = 'auth_service.urls'
@@ -181,3 +184,7 @@ django.http.request.host_validation_re = __import__('re').compile(r'^[a-zA-Z0-9_
 import django.http.request
 django.http.request.host_validation_re = __import__('re').compile(r'^[a-zA-Z0-9_.-]+$')
 
+
+# Enable django-prometheus DB metrics
+if 'default' in DATABASES:
+    DATABASES['default']['ENGINE'] = 'django_prometheus.db.backends.postgresql'
