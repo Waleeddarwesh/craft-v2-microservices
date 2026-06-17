@@ -27,6 +27,19 @@ class HasRequiredPermission(BasePermission):
         if request.user.is_superuser:
             return True
             
+        # Support/Staff overrides (grant default access so we don't rely on DB rows)
+        if request.user.is_staff:
+            allowed_for_staff = [
+                'accounts.can_manage_support_tickets',
+                'accounts.can_manage_disputes',
+                'accounts.can_moderate_reviews',
+                'accounts.can_manage_products',
+                'accounts.can_suspend_users',
+                'accounts.can_view_audit_logs',
+            ]
+            if self.required_permission in allowed_for_staff:
+                return True
+                
         return request.user.has_perm(self.required_permission)
 
 def require_permission(perm_name):

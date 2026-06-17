@@ -122,4 +122,4 @@ ENV PATH="/app/.venv/bin:$PATH"
 EXPOSE 8000
 
 # Start the ASGI application using Daphne
-CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "Handcrafts.asgi:application"]
+CMD ["opentelemetry-instrument", "daphne", "-b", "0.0.0.0", "-p", "8000", "Handcrafts.asgi:application"]

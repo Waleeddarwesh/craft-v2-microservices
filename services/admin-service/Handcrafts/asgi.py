@@ -8,7 +8,6 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Handcrafts.settings')
 application = get_asgi_application()
 
 from channels.routing import ProtocolTypeRouter, URLRouter
-from chatapp.routing import websocket_urlpatterns as chatapp_ws_urlpatterns
 from notifications.routing import websocket_urlpatterns as notifications_ws_urlpatterns
 from .middleware import TokenAuthMiddleware
 
@@ -17,7 +16,7 @@ application = ProtocolTypeRouter(
         "http": get_asgi_application(),
         "websocket": TokenAuthMiddleware(
             URLRouter(
-                chatapp_ws_urlpatterns + notifications_ws_urlpatterns
+                notifications_ws_urlpatterns
             )
         ),
     }

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,13 +11,15 @@
     <link rel="stylesheet" href="css/components.css">
     <link rel="stylesheet" href="css/layout.css">
     <link rel="stylesheet" href="css/pages.css">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌿</text></svg>">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌿</text></svg>">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script>
         /* Apply saved theme immediately to prevent flash */
-        (function(){var t=localStorage.getItem('craft_theme')||'dark';document.documentElement.setAttribute('data-theme',t)})();
+        (function () { var t = localStorage.getItem('craft_theme') || 'dark'; document.documentElement.setAttribute('data-theme', t) })();
     </script>
 </head>
+
 <body>
     <div class="app-layout" id="app-layout">
         <!-- Sidebar -->
@@ -46,7 +49,8 @@
     </div>
 
     <!-- Mobile Overlay -->
-    <div id="mobile-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:250" onclick="document.getElementById('sidebar').classList.remove('mobile-open');this.style.display='none'"></div>
+    <div id="mobile-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:250"
+        onclick="document.getElementById('sidebar').classList.remove('mobile-open');this.style.display='none'"></div>
 
     <!-- Core Scripts -->
     <script src="js/i18n.js?v=2"></script>
@@ -86,4 +90,5 @@
     <script src="js/pages/product-moderation.js?v=2"></script>
     <script src="js/app.js?v=2"></script>
 </body>
+
 </html>

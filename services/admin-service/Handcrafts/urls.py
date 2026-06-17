@@ -91,23 +91,11 @@ def check_docs_token(view_func):
     return wrapped_view
 
 urlpatterns = [
+    path('', include('django_prometheus.urls')),
     path('', RedirectView.as_view(url='/dashboard/', permanent=False), name='index'),
     path('docs/', check_docs_token(schema_view.with_ui('swagger', cache_timeout=0)), name='schema-swagger-ui'),
     path('admin/', admin.site.urls),
-    path('accounts/', include('accounts.urls')),
-    path('auth/', include('social_django.urls', namespace='social')),
-    path('product/', include('products.urls')),
-    path('course/', include('course.urls')),
-    path('orders/', include('orders.urls')),
-    path('payment/', include('payment.urls')),
-    path('review/', include('reviews.urls')),
-    path('notifications/', include('notifications.urls')),
-    path('chat/', include('chatapp.urls')),
-    path('return/', include('returnrequest.urls')),
-    path('reports/', include('reports.urls')),
-    path('recommendations/', include('recommendations.urls')),
-    path('support/', include('support_tickets.urls')),
-    path('disputes/', include('disputes.urls')),
+
 
     # Admin API & Dashboard
     path('admin-api/', include('admin_api.urls')),
