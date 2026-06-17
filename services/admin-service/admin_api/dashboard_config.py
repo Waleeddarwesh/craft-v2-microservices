@@ -118,7 +118,7 @@ DASHBOARD_MODULES = [
         "key": "product-moderation",
         "label": _("Product Moderation"),
         "icon": "products",
-        "roles": ["is_superuser", "is_staff"],
+        "roles": ["is_superuser"],
         "permission": "accounts.can_manage_products"
     },
     {
@@ -214,6 +214,10 @@ def get_user_dashboard_widgets(user):
             continue
             
         if "is_delivery" in config["roles"] and getattr(user, 'is_delivery', False):
+            allowed_widgets.append(widget_key)
+            continue
+            
+        if "is_staff" in config["roles"] and getattr(user, 'is_staff', False):
             allowed_widgets.append(widget_key)
             continue
             

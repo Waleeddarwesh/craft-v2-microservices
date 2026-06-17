@@ -35,6 +35,23 @@ const Topbar = (() => {
     function render(container) {
         const user = Auth.getUser() || { full_name: 'Admin', email: 'admin@craft.com' };
         const initials = user.full_name ? user.full_name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() : 'A';
+        
+        const identUser = window.UserIdentity && window.UserIdentity.user ? window.UserIdentity.user : null;
+        let roleName = window.t('Administrator');
+        if (identUser) {
+            if (identUser.role_name) {
+                // If the backend provided a role_name (e.g. Sales, Operations, Admin)
+                // Appending Administrator suffix if it's not already Admin to match the old monolith style
+                roleName = identUser.role_name;
+                if (roleName !== 'Admin' && roleName !== 'Administrator') {
+                    roleName = `${roleName} ${window.t('Administrator')}`;
+                }
+            } else if (identUser.is_superuser) roleName = window.t('Administrator');
+            else if (identUser.is_supplier) roleName = window.t('Supplier');
+            else if (identUser.is_delivery) roleName = window.t('Delivery Partner');
+            else if (identUser.is_staff) roleName = window.t('Support Administrator');
+        }
+
         container.innerHTML = `
             <div class="topbar-left">
                 <div class="topbar-toggle" onclick="Sidebar.toggleCollapse();document.getElementById('mobile-overlay').style.display=document.getElementById('sidebar').classList.contains('mobile-open')?'block':'none'" id="sidebar-toggle">
@@ -61,7 +78,7 @@ const Topbar = (() => {
                     <div class="topbar-profile" onclick="document.getElementById('profile-dropdown').classList.toggle('open')">
                         <div class="topbar-profile-info">
                             <div class="topbar-profile-name">${user.full_name || 'Admin'}</div>
-                            <div class="topbar-profile-role">${window.t('Administrator')}</div>
+                            <div class="topbar-profile-role">${roleName}</div>
                         </div>
                         <div class="avatar">${initials}</div>
                     </div>

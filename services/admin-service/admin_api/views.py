@@ -53,6 +53,10 @@ class DashboardIdentityView(APIView):
         # Collect explicit Django permissions for the frontend
         perms = list(user.get_all_permissions())
         
+        # Collect groups to determine their specific team role
+        groups = list(user.groups.values_list('name', flat=True))
+        primary_group = groups[0] if groups else ('Administrator' if user.is_superuser else None)
+
         # Build user profile for the frontend
         user_data = {
             'id': user.id,
@@ -63,7 +67,8 @@ class DashboardIdentityView(APIView):
             'is_staff': user.is_staff,
             'is_supplier': getattr(user, 'is_supplier', False),
             'is_delivery': getattr(user, 'is_delivery', False),
-            'is_customer': getattr(user, 'is_customer', False)
+            'is_customer': getattr(user, 'is_customer', False),
+            'role_name': primary_group
         }
         
         return Response({
@@ -138,9 +143,8 @@ def dashboard_view(request, path='index.html'):
 
 class AdminStatsView(APIView):
     """Aggregated KPI statistics for the dashboard overview."""
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsDashboardUser]
 
-    @method_decorator(cache_page(60 * 2))  # Cache for 2 minutes
     def get(self, request):
         now = timezone.now()
         month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -187,16 +191,22 @@ class AdminStatsView(APIView):
 
         # Revenue change
         last_month_start = (month_start - timezone.timedelta(days=1)).replace(day=1)
-        this_month_revenue = PaymentHistory.objects.filter(
+        this_month_qs = PaymentHistory.objects.filter(
             payment_status='succeeded',
             date__gte=month_start
-        ).aggregate(total=Sum('order__final_amount'))['total'] or Decimal('0')
-
-        last_month_revenue = PaymentHistory.objects.filter(
+        )
+        last_month_qs = PaymentHistory.objects.filter(
             payment_status='succeeded',
             date__gte=last_month_start,
             date__lt=month_start
-        ).aggregate(total=Sum('order__final_amount'))['total'] or Decimal('0')
+        )
+        
+        if not request.user.is_superuser and getattr(request.user, 'is_supplier', False):
+            this_month_qs = this_month_qs.filter(Q(order__items__product__Supplier__user=request.user) | Q(course__Supplier__user=request.user)).distinct()
+            last_month_qs = last_month_qs.filter(Q(order__items__product__Supplier__user=request.user) | Q(course__Supplier__user=request.user)).distinct()
+            
+        this_month_revenue = this_month_qs.aggregate(total=Sum('order__final_amount'))['total'] or Decimal('0')
+        last_month_revenue = last_month_qs.aggregate(total=Sum('order__final_amount'))['total'] or Decimal('0')
         
         revenue_change = 0
         if last_month_revenue > 0:
@@ -205,11 +215,17 @@ class AdminStatsView(APIView):
             revenue_change = 100.0
 
         # Month-over-month order change
-        this_month_orders = Order.objects.filter(created_at__gte=month_start).count()
-        last_month_orders = Order.objects.filter(
+        this_month_orders_qs = Order.objects.filter(created_at__gte=month_start)
+        last_month_orders_qs = Order.objects.filter(
             created_at__gte=last_month_start,
             created_at__lt=month_start
-        ).count()
+        )
+        if not request.user.is_superuser and getattr(request.user, 'is_supplier', False):
+            this_month_orders_qs = this_month_orders_qs.filter(items__product__Supplier__user=request.user).distinct()
+            last_month_orders_qs = last_month_orders_qs.filter(items__product__Supplier__user=request.user).distinct()
+            
+        this_month_orders = this_month_orders_qs.count()
+        last_month_orders = last_month_orders_qs.count()
         orders_change = 0
         if last_month_orders > 0:
             orders_change = round(((this_month_orders - last_month_orders) / last_month_orders) * 100, 1)
@@ -245,14 +261,19 @@ class AdminChartsView(APIView):
     """Chart data for the dashboard overview."""
     permission_classes = [IsDashboardUser]
 
-    @method_decorator(cache_page(60 * 5))  # Cache for 5 minutes
     def get(self, request):
         # Monthly revenue (last 6 months)
         six_months_ago = timezone.now() - timezone.timedelta(days=180)
-        monthly = PaymentHistory.objects.filter(
+        monthly_qs = PaymentHistory.objects.filter(
             payment_status='succeeded',
             date__gte=six_months_ago
-        ).annotate(
+        )
+        
+        if not request.user.is_superuser and getattr(request.user, 'is_supplier', False):
+            from django.db.models import Q
+            monthly_qs = monthly_qs.filter(Q(order__items__product__Supplier__user=request.user) | Q(course__Supplier__user=request.user)).distinct()
+
+        monthly = monthly_qs.annotate(
             month=TruncMonth('date')
         ).values('month').annotate(
             total=Sum('order__final_amount')
@@ -262,7 +283,13 @@ class AdminChartsView(APIView):
         revenue_data = [float(m['total'] or 0) for m in monthly]
 
         # Order status distribution
-        statuses = Order.objects.values('status').annotate(count=Count('id')).order_by('-count')
+        statuses_qs = Order.objects.all()
+        if not request.user.is_superuser and getattr(request.user, 'is_supplier', False):
+            statuses_qs = statuses_qs.filter(items__product__Supplier__user=request.user).distinct()
+        elif not request.user.is_superuser and getattr(request.user, 'is_delivery', False):
+            statuses_qs = statuses_qs.filter(shipments__delivery__user=request.user).distinct()
+            
+        statuses = statuses_qs.values('status').annotate(count=Count('id')).order_by('-count')
         status_labels = [s['status'].replace('_', ' ').title() for s in statuses]
         status_data = [s['count'] for s in statuses]
 

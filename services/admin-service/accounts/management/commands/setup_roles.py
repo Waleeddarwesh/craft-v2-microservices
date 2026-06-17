@@ -5,24 +5,19 @@ from django.conf import settings
 
 # A map of roles to their permissions
 ROLES = {
-    'Super Admin': [
+    'Admin': [
         'can_approve_withdrawals', 'can_refund_orders', 'can_suspend_users',
         'can_verify_suppliers', 'can_manage_courses', 'can_manage_products',
         'can_manage_disputes', 'can_view_financial_reports', 'can_view_audit_logs',
         'can_manage_support_tickets'
     ],
-    'Admin': [
-        'can_approve_withdrawals', 'can_refund_orders', 'can_suspend_users',
-        'can_verify_suppliers', 'can_manage_disputes', 'can_view_audit_logs',
-        'can_manage_support_tickets'
+    'Operations': [
+        'can_manage_products', 'can_suspend_users', 'can_manage_disputes'
     ],
-    'Finance Manager': [
-        'can_approve_withdrawals', 'can_refund_orders', 'can_view_financial_reports'
+    'Sales': [
+        'can_view_financial_reports', 'can_approve_withdrawals'
     ],
-    'Content Manager': [
-        'can_manage_courses', 'can_manage_products'
-    ],
-    'Support Agent': [
+    'Support': [
         'can_manage_support_tickets', 'can_manage_disputes', 'can_refund_orders'
     ],
     'Supplier': [],
@@ -31,7 +26,7 @@ ROLES = {
 }
 
 class Command(BaseCommand):
-    help = 'Create default roles (Groups) and assign permissions'
+    help = 'Create default roles (Groups) and assign permissions for the 4 core teams (Admin, Operations, Sales, Support)'
 
     def handle(self, *args, **options):
         # We assume custom permissions are attached to the User model as defined in accounts.models.User
@@ -42,6 +37,9 @@ class Command(BaseCommand):
             group, created = Group.objects.get_or_create(name=role_name)
             if created:
                 self.stdout.write(self.style.SUCCESS(f'Created group: {role_name}'))
+            else:
+                # Clear existing permissions to sync with the new list
+                group.permissions.clear()
             
             # Assign permissions
             for codename in perms:
