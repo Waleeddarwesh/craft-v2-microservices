@@ -116,6 +116,7 @@ LOCAL_APPS = [
     'returnrequest',
     'reviews',
     'support_tickets',
+    'workflows',
 ]
 
 INSTALLED_APPS = THIRD_PARTY_APPS + DJANGO_APPS + LOCAL_APPS
@@ -478,5 +479,21 @@ LOGGING = {
             'level': env('DJANGO_LOG_LEVEL', default='INFO'),
             'propagate': False,
         },
+    },
+}
+
+# ==============================================================================
+# CELERY BEAT SCHEDULE
+# ==============================================================================
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    'check_sla_breaches_every_15_mins': {
+        'task': 'workflows.tasks.check_sla_breaches',
+        'schedule': crontab(minute='*/15'),
+    },
+    'send_pending_approval_reminders_daily': {
+        'task': 'workflows.tasks.send_pending_approval_reminders',
+        'schedule': crontab(hour=8, minute=0),
     },
 }

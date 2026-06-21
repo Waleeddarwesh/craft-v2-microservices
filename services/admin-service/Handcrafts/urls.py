@@ -123,6 +123,13 @@ urlpatterns = [
     # Admin API & Dashboard
     path('admin-api/', include('admin_api.urls')),
     
+    # Workflows & Approvals (Phase 1 & 2)
+    path('api/workflows/', include('workflows.urls')),
+    path('api/audit/', include('audit_logs.urls')),
+    
+    # Internal Notifications (Phase 6)
+    path('api/notifications-system/', include('notifications.urls')),
+    
     # Craft Developer Portal
     path('developer/', include('developer_portal.urls')),
 
