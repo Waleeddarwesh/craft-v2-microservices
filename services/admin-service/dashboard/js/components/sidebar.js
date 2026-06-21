@@ -22,6 +22,8 @@ const Sidebar = (() => {
         {
             section: window.t('Main'), items: [
                 { route: 'overview', label: window.t('Overview'), icon: 'overview' },
+                { route: 'tasks', label: window.t('My Tasks'), icon: 'notifications', badgeKey: 'pending_tasks' },
+                { route: 'approvals', label: window.t('Pending Approvals'), icon: 'audit', badgeKey: 'pending_approvals' },
                 { route: 'orders', label: window.t('Orders'), icon: 'orders' },
                 { route: 'returns', label: window.t('Returns'), icon: 'returns', badgeKey: 'pending_returns' },
                 { route: 'products', label: window.t('Products'), icon: 'products' },
@@ -62,6 +64,8 @@ const Sidebar = (() => {
         {
             section: window.t('System'), items: [
                 { route: 'settings', label: window.t('Settings'), icon: 'settings' },
+                { route: 'api-docs', label: window.t('API Docs'), icon: 'audit' },
+                { route: 'system-health', label: window.t('System Health'), icon: 'overview' },
             ]
         }
     ];

@@ -73,16 +73,21 @@ window.arbitrateDispute = async function(id) {
                 <hr style="border:0; border-top:1px solid var(--clr-border);">
                 
                 <form id="dispute-resolve-form" style="display:flex; flex-direction:column; gap:12px;">
-                    <div>
-                        <label>${window.t('Admin Resolution & Official Ruling')}</label>
-                        <textarea id="dispute-resolution" class="input" rows="5" placeholder="${window.t('Type the official ruling here...')}" required>${dispute.admin_resolution || ''}</textarea>
-                        <small style="color:var(--clr-text-muted);">${window.t('This ruling is manually enforced. Ensure all financial actions are performed separately before closing.')}</small>
+                    <div class="form-group">
+                        <label class="form-label">${window.t('Admin Resolution & Official Ruling')}</label>
+                        <textarea id="dispute-resolution" class="form-input" rows="5" placeholder="${window.t('Type the official ruling here...')}" required>${dispute.admin_resolution || ''}</textarea>
+                        <div style="margin-top:4px; padding:10px 12px; background:var(--clr-warning-bg); border-right:3px solid var(--clr-warning); border-radius:var(--radius-sm); color:var(--clr-warning); font-size:var(--fs-xs); display:flex; align-items:center; gap:8px;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                            <span>${window.t('This ruling is manually enforced. Ensure all financial actions are performed separately before closing.')}</span>
+                        </div>
                     </div>
-                    <div>
-                        <label>${window.t('Update Status')}</label>
-                        <select id="dispute-status" class="input">
+                    <div class="form-group">
+                        <label class="form-label">${window.t('Update Status')}</label>
+                        <select id="dispute-status" class="form-input form-select">
                             <option value="open" ${dispute.status === 'open' ? 'selected' : ''}>${window.t('Open')}</option>
-                            <option value="resolved" ${dispute.status === 'resolved' ? 'selected' : ''}>${window.t('Resolved (Close Case)')}</option>
+                            <option value="investigating" ${dispute.status === 'investigating' ? 'selected' : ''}>${window.t('Investigating')}</option>
+                            <option value="resolved_customer" ${dispute.status === 'resolved_customer' ? 'selected' : ''}>${window.t('Resolved (Customer Win)')}</option>
+                            <option value="resolved_supplier" ${dispute.status === 'resolved_supplier' ? 'selected' : ''}>${window.t('Resolved (Supplier Win)')}</option>
                             <option value="closed" ${dispute.status === 'closed' ? 'selected' : ''}>${window.t('Closed (Dismissed)')}</option>
                         </select>
                     </div>

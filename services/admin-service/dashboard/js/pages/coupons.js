@@ -19,7 +19,7 @@ const CouponsPage = (() => {
                         if (!v) return '—';
                         const d = new Date(v);
                         const expired = d < new Date();
-                        return `<span class="${expired ? 'text-danger' : ''}">${d.toLocaleDateString()}${expired ? ' (expired)' : ''}</span>`;
+                        return `<span class="${expired ? 'text-danger' : ''}">${d.toLocaleDateString()}${expired ? window.t(' (expired)') : ''}</span>`;
                     }},
                 ],
                 data: coupons

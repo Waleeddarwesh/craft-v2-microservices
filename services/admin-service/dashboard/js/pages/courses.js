@@ -14,7 +14,7 @@ const CoursesPage = (() => {
                 return `<div class="product-card" style="cursor:pointer" onclick='DataTable.showRowDetails(${JSON.stringify(c).replace(/'/g, "&apos;")}, "Course Details")'>
                     <div class="product-card-image">${thumb}</div>
                     <div class="product-card-body">
-                        <div class="product-card-name">${c.CourseTitle}</div>
+                        <div class="product-card-name">${window.t(c.CourseTitle)}</div>
                         <div class="product-card-supplier">${c.supplier_name || ''} · ${c.enrollments_count || 0} ${window.t('enrolled')} · ${c.CourseHours || 0}${window.t('h')}</div>
                         <div class="product-card-footer">
                             <span class="product-card-price">EGP ${parseFloat(c.Price||0).toLocaleString()}</span>

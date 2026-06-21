@@ -60,9 +60,10 @@ const NotificationsPage = (() => {
                 <div style="display:flex;justify-content:space-between;align-items:flex-start">
                     <div>
                         ${n.title ? `<p dir="auto" style="font-size:var(--fs-md);font-weight:var(--fw-bold);margin-bottom:4px;">${window.t(n.title)}</p>` : ''}
-                        <p dir="auto" style="font-size:var(--fs-sm);${!n.is_read && !n.title ? 'font-weight:var(--fw-semibold)' : 'color:var(--clr-text-secondary)'}">${window.t(n.message)}</p>
+                        <p dir="auto" style="font-size:var(--fs-sm);${!n.is_read && !n.title ? 'font-weight:var(--fw-semibold)' : 'color:var(--clr-text-secondary)'}">${window.t(n.message).replace(/\n/g, '<br>')}</p>
+                        ${n.image_url ? `<div style="margin-top:12px"><img src="${Auth.getApiBase()}${n.image_url}" style="max-width:100%; max-height:200px; border-radius:var(--radius-md); border:1px solid var(--clr-surface-border);"></div>` : ''}
                         <div style="display:flex;gap:var(--space-3);margin-top:var(--space-1)">
-                            <span style="font-size:var(--fs-xs);color:var(--clr-text-muted)">${n.timestamp ? new Date(n.timestamp).toLocaleString() : ''}</span>
+                            <span style="font-size:var(--fs-xs);color:var(--clr-text-muted)">${n.timestamp ? new Date(n.timestamp).toLocaleString(window.I18n.getLang() === 'ar' ? 'ar-EG' : 'en-US') : ''}</span>
                             ${n.department ? `<span style="font-size:var(--fs-xs);color:var(--clr-primary)">· ${window.t('Dept')}: ${n.department}</span>` : ''}
                             ${n.user_email ? `<span style="font-size:var(--fs-xs);color:var(--clr-text-muted)">· ${n.user_email}</span>` : ''}
                         </div>
@@ -76,66 +77,82 @@ const NotificationsPage = (() => {
     async function markAllRead() {
         try {
             await API.post('/admin-api/notifications/');
-            Toast.success('All notifications marked as read');
+            Toast.success(window.t('All notifications marked as read'));
             await loadNotifications();
-        } catch { Toast.info('Mark all read — could not complete'); }
+        } catch { Toast.info(window.t('Mark all read — could not complete')); }
     }
 
     function openSendModal() {
         const body = `
             <div class="form-group mb-4">
-                <label class="form-label" style="display:block;margin-bottom:8px">Recipient User ID (Leave 'all' for everyone)</label>
-                <input type="text" id="notif-user-id" class="input" style="width:100%;padding:8px" value="all" placeholder="e.g. 15 or 'all'">
+                <label class="form-label" style="display:block;margin-bottom:8px">${window.t("Recipient User Email (Leave 'all' for everyone)")}</label>
+                <input type="text" id="notif-user-email" class="form-input" style="width:100%" value="all">
             </div>
             <div class="form-group mb-4">
-                <label class="form-label" style="display:block;margin-bottom:8px">Notification Title</label>
-                <input type="text" id="notif-title" class="input" style="width:100%;padding:8px" placeholder="Alert Title">
+                <label class="form-label" style="display:block;margin-bottom:8px">${window.t('Notification Title')}</label>
+                <input type="text" id="notif-title" class="form-input" style="width:100%">
             </div>
             <div class="form-group mb-4">
-                <label class="form-label" style="display:block;margin-bottom:8px">Message</label>
-                <textarea id="notif-message" class="input" style="width:100%;padding:8px" rows="3" placeholder="Enter message body"></textarea>
+                <label class="form-label" style="display:block;margin-bottom:8px">${window.t('Message')}</label>
+                <textarea id="notif-msg" class="form-input" style="width:100%;height:100px;resize:vertical"></textarea>
             </div>
             <div class="form-group mb-4">
-                <label class="form-label" style="display:block;margin-bottom:8px">Type</label>
-                <select id="notif-type" class="input" style="width:100%;padding:8px">
-                    <option value="system">System</option>
-                    <option value="promo">Promotion</option>
-                    <option value="alert">Alert</option>
+                <label class="form-label" style="display:block;margin-bottom:8px">${window.t('Type')}</label>
+                <select id="notif-type" class="form-input" style="width:100%">
+                    <option value="system">${window.t('System Alert')}</option>
+                    <option value="promotion">${window.t('Promotion')}</option>
+                    <option value="order">${window.t('Order Update')}</option>
+                    <option value="alert">${window.t('Important Alert')}</option>
                 </select>
+            </div>
+            <div class="form-group mb-4">
+                <label class="form-label" style="display:block;margin-bottom:8px">${window.t('Attach Image (Optional)')}</label>
+                <input type="file" id="notif-image" class="form-input" style="width:100%" accept="image/*">
             </div>
             <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
                 <button class="btn btn-outline" onclick="Modal.close()">${window.t('Cancel')}</button>
                 <button class="btn btn-primary" onclick="NotificationsPage.sendNotification()">${window.t('Send')}</button>
             </div>
         `;
-        Modal.open('Send Notification', body, '');
+        Modal.open(window.t('Send Notification'), body, '');
     }
 
     async function sendNotification() {
-        const userId = document.getElementById('notif-user-id').value.trim();
+        const userEmail = document.getElementById('notif-user-email').value.trim();
         const title = document.getElementById('notif-title').value.trim();
-        const message = document.getElementById('notif-message').value.trim();
+        const message = document.getElementById('notif-msg').value.trim();
         const type = document.getElementById('notif-type').value;
 
         if (!title || !message) {
-            Toast.error('Title and message are required');
+            Toast.error(window.t('Title and message are required'));
             return;
         }
 
         try {
-            await API.post('/admin-api/notifications/send/', {
-                user_id: userId,
-                title: title,
-                message: message,
-                type: type
+            const formData = new FormData();
+            formData.append('user_email', userEmail);
+            formData.append('title', title);
+            formData.append('message', message);
+            formData.append('type', type);
+            
+            const imgInput = document.getElementById('notif-image');
+            if (imgInput && imgInput.files.length > 0) {
+                formData.append('image', imgInput.files[0]);
+            }
+
+            await API.request('/admin-api/notifications/send/', {
+                method: 'POST',
+                body: formData
             });
-            Toast.success('Notification sent successfully');
+            Toast.success(window.t('Notification sent successfully'));
             Modal.close();
             await loadNotifications();
         } catch (e) {
-            Toast.error('Failed to send: ' + e.message);
+            Toast.error(window.t('Failed to send: ') + e.message);
         }
     }
 
     return { render, switchTab, markAllRead, openSendModal, sendNotification };
 })();
+
+window.NotificationsPage = NotificationsPage;

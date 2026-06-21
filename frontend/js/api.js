@@ -6,7 +6,10 @@ const API = (() => {
 
     async function request(endpoint, options = {}) {
         const url = endpoint.startsWith('http') ? endpoint : `${getBase()}${endpoint}`;
-        const headers = { 'Content-Type': 'application/json', ...options.headers };
+        const headers = { ...options.headers };
+        if (!(options.body instanceof FormData)) {
+            headers['Content-Type'] = headers['Content-Type'] || 'application/json';
+        }
         const token = Auth.getAccessToken();
         if (token) headers['Authorization'] = `Bearer ${token}`;
         if (window.I18n) headers['Accept-Language'] = window.I18n.getLang();

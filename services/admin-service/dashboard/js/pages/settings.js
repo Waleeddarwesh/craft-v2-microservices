@@ -44,7 +44,7 @@ const SettingsPage = (() => {
                     </div>
                 </div>
 
-                ${(window.UserIdentity && window.UserIdentity.user.is_superuser) ? `
+                ${(window.UserIdentity && window.UserIdentity.is_superuser) ? `
                 <!-- Advanced / Admin Links -->
                 <div class="card">
                     <div class="card-header"><span class="card-title">${window.t('Advanced')}</span></div>

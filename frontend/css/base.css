@@ -12,6 +12,7 @@ a:hover{color:var(--clr-primary)}
 img{max-width:100%;display:block}
 button{font-family:inherit;cursor:pointer;border:none;outline:none;background:none;color:inherit}
 input,select,textarea{font-family:inherit;font-size:inherit;color:inherit;border:none;outline:none;background:none}
+select option { background-color: var(--clr-bg); color: var(--clr-text); }
 ul,ol{list-style:none}
 table{border-collapse:collapse;width:100%}
 

@@ -22,7 +22,8 @@ const Router = (() => {
         const handler = routes[route];
         const content = document.getElementById('main-content');
         const titles = {
-            overview: 'Dashboard', orders: 'Orders', returns: 'Return Requests',
+            overview: 'Dashboard', tasks: 'My Tasks', approvals: 'Pending Approvals',
+            orders: 'Orders', returns: 'Return Requests',
             products: 'Products', users: 'Users', payments: 'Payments',
             withdrawals: 'Withdrawals', courses: 'Courses', reviews: 'Reviews',
             coupons: 'Coupons', reports: 'Reports', notifications: 'Notifications',
@@ -30,7 +31,8 @@ const Router = (() => {
             'supplier-performance': 'Supplier Performance', 'delivery-performance': 'Delivery Performance',
             'fraud-alerts': 'Fraud Alerts', 'product-moderation': 'Product Moderation',
             reconciliation: 'Financial Reconciliation',
-            'audit-logs': 'Audit Logs', settings: 'Settings'
+            'audit-logs': 'Audit Logs', settings: 'Settings',
+            'system-health': 'System Health'
         };
         
         let breadcrumbHtml = '';

@@ -220,7 +220,7 @@ const OverviewPage = (() => {
             </div>`; return;
             }
             el.innerHTML = `<table class="data-table"><thead><tr><th>${window.t('Product')}</th><th>${window.t('Units Sold')}</th><th>${window.t('Revenue')}</th></tr></thead><tbody>` +
-                products.map(p => `<tr onclick="window.location.hash='products'" style="cursor:pointer" title="${window.t('View Product')}">
+                products.map(p => `<tr onclick="window.viewOverviewProduct(${p.id})" style="cursor:pointer" title="${window.t('View Product')}">
                     <td>
                         <div style="font-weight:var(--fw-medium); font-size:var(--fs-sm);">${p.name}</div>
                         <div style="font-size:var(--fs-xs); color:var(--clr-text-muted);">${p.category || ''}</div>
@@ -233,6 +233,20 @@ const OverviewPage = (() => {
             document.getElementById('top-products-table').innerHTML = `<p style="text-align:center;color:var(--clr-text-muted);padding:var(--space-8)">${window.t('Failed to load top products')}</p>`;
         }
     }
+
+    window.viewOverviewProduct = async function(id) {
+        try {
+            const btn = event.currentTarget;
+            btn.style.opacity = '0.5';
+            const products = await API.get('/admin-api/products/');
+            const p = products.find(x => x.id === id || x.ProductID === id);
+            btn.style.opacity = '1';
+            if (p) DataTable.showRowDetails(p, window.t("Product Details"));
+            else window.Toast && window.Toast.error("Product not found");
+        } catch(e) {
+            window.Toast && window.Toast.error(e.message);
+        }
+    };
 
     async function loadPendingReturns() {
         try {

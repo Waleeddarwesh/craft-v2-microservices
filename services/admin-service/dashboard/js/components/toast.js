@@ -17,3 +17,4 @@ const Toast = (() => {
     }
     return { show: show, success: (m) => show(m, 'success'), error: (m) => show(m, 'error'), warning: (m) => show(m, 'warning'), info: (m) => show(m, 'info') };
 })();
+window.Toast = Toast;

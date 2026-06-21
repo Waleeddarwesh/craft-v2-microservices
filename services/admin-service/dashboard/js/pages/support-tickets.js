@@ -73,18 +73,18 @@ window.viewTicket = async function(id) {
                 </div>
                 <hr style="border:0; border-top:1px solid var(--clr-border);">
                 <form id="ticket-reply-form" style="display:flex; flex-direction:column; gap:12px;">
-                    <div>
-                        <label>${window.t('Update Status')}</label>
-                        <select id="ticket-status" class="input">
+                    <div class="form-group">
+                        <label class="form-label">${window.t('Update Status')}</label>
+                        <select id="ticket-status" class="form-input form-select">
                             <option value="open" ${ticket.status === 'open' ? 'selected' : ''}>${window.t('Open')}</option>
                             <option value="in_progress" ${ticket.status === 'in_progress' ? 'selected' : ''}>${window.t('In Progress')}</option>
                             <option value="resolved" ${ticket.status === 'resolved' ? 'selected' : ''}>${window.t('Resolved')}</option>
                             <option value="closed" ${ticket.status === 'closed' ? 'selected' : ''}>${window.t('Closed')}</option>
                         </select>
                     </div>
-                    <div>
-                        <label>${window.t('Reply Message (Optional)')}</label>
-                        <textarea id="ticket-message" class="input" rows="4" placeholder="${window.t('Type your reply here...')}"></textarea>
+                    <div class="form-group">
+                        <label class="form-label">${window.t('Reply Message (Optional)')}</label>
+                        <textarea id="ticket-message" class="form-input" rows="4" placeholder="${window.t('Type your reply here...')}"></textarea>
                     </div>
                     <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">
                         <button type="button" class="btn btn-outline" onclick="Modal.close()">${window.t('Cancel')}</button>

@@ -51,7 +51,7 @@
 .topbar-btn{width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-md);color:var(--clr-text-secondary);transition:all var(--transition-base);position:relative;cursor:pointer}
 .topbar-btn:hover{background:var(--clr-surface);color:var(--clr-text)}
 .topbar-btn svg{width:20px;height:20px}
-.topbar-btn .notif-dot{position:absolute;top:8px;right:8px;width:8px;height:8px;background:var(--clr-danger);border-radius:50%;border:2px solid var(--clr-bg)}
+.topbar-btn .notif-dot{position:absolute;top:4px;right:4px;min-width:16px;height:16px;padding:0 4px;background:var(--clr-danger);color:white;border-radius:10px;border:2px solid var(--glass-bg);font-size:10px;font-weight:bold;display:flex;align-items:center;justify-content:center;line-height:1}
 
 .topbar-profile{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-3);border-radius:var(--radius-md);cursor:pointer;transition:all var(--transition-base)}
 .topbar-profile:hover{background:var(--clr-surface)}
@@ -117,7 +117,7 @@
 [dir="rtl"] .nav-item .nav-badge { margin-left: 0; margin-right: auto; }
 [dir="rtl"] .topbar-search input { padding: var(--space-2) 40px var(--space-2) var(--space-4); }
 [dir="rtl"] .topbar-search svg { left: auto; right: 14px; }
-[dir="rtl"] .topbar-btn .notif-dot { right: auto; left: 8px; }
+[dir="rtl"] .topbar-btn .notif-dot { right: auto; left: 4px; }
 [dir="rtl"] .topbar-profile-info { text-align: left; }
 [dir="rtl"] .page-header-actions { margin-left: 0; margin-right: auto; }
 [dir="rtl"] .filter-bar select { padding-right: var(--space-4); padding-left: 30px; background-position: left 10px center; }

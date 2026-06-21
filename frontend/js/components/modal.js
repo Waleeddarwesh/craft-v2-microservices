@@ -22,8 +22,9 @@ const Modal = (() => {
     }
 
     function confirm(title, message, onConfirm, confirmText = 'Confirm', type = 'primary') {
+        window.__modalConfirmCallback = onConfirm;
         const body = `<p style="color:var(--clr-text-secondary);font-size:var(--fs-sm)">${message}</p>`;
-        const footer = `<button class="btn btn-ghost" onclick="Modal.close()">Cancel</button><button class="btn btn-${type}" onclick="Modal.close();(${onConfirm.toString()})()">${confirmText}</button>`;
+        const footer = `<button class="btn btn-ghost" onclick="Modal.close()">Cancel</button><button class="btn btn-${type}" onclick="Modal.close(); if(window.__modalConfirmCallback) window.__modalConfirmCallback()">${confirmText}</button>`;
         open(title, body, footer);
     }
 

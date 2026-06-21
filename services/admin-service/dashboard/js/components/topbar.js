@@ -46,6 +46,7 @@ const Topbar = (() => {
             else if (identUser.is_delivery) roleName = window.t('Delivery Partner');
             else if (identUser.is_staff) roleName = window.t('Support Administrator');
         }
+
         container.innerHTML = `
             <div class="topbar-left">
                 <div class="topbar-toggle" onclick="Sidebar.toggleCollapse();document.getElementById('mobile-overlay').style.display=document.getElementById('sidebar').classList.contains('mobile-open')?'block':'none'" id="sidebar-toggle">
@@ -136,6 +137,28 @@ const Topbar = (() => {
         });
         // Set correct theme toggle icon for current theme
         ThemeManager.updateToggleIcon(ThemeManager.getTheme());
+        // Fetch unread notifications logic
+        async function updateNotifications() {
+            try {
+                // Since this is the Dashboard, use admin-api proxy
+                const res = await API.get('/admin-api/notifications/');
+                const unreadCount = res.filter(n => !n.is_read).length;
+                const dot = document.getElementById('notif-dot');
+                if (dot) {
+                    dot.style.display = unreadCount > 0 ? 'inline-block' : 'none';
+                    dot.textContent = unreadCount > 9 ? '9+' : (unreadCount > 0 ? unreadCount : '');
+                }
+            } catch (e) {
+                console.error("Failed to fetch notifications:", e);
+            }
+        }
+        
+        // Initial fetch
+        updateNotifications();
+        
+        // Optional: Poll every 30 seconds
+        setInterval(updateNotifications, 30000);
+
     }
     return { render };
 })();

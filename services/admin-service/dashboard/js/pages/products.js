@@ -68,7 +68,7 @@ const ProductsPage = (() => {
                 const stockClass = stock === 0 || p.OutOfStock ? 'out-of-stock' : stock <= 5 ? 'low-stock' : 'in-stock';
                 const stockText = stock === 0 || p.OutOfStock ? window.t('Out of Stock') : stock <= 5 ? `${window.t('Low')}: ${stock}` : `${window.t('in stock')} ${stock}`;
                 const price = parseFloat(p.UnitPrice || 0);
-                const safeBodyName = p.ProductName ? p.ProductName.replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
+                const safeBodyName = p.ProductName ? window.t(p.ProductName).replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
                 const safeSupplierName = p.supplier_name ? p.supplier_name.replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
                 return `<div class="product-card" style="cursor:pointer" onclick='DataTable.showRowDetails(${JSON.stringify(p).replace(/'/g, "&apos;")}, "Product Details")'>
                     <div class="product-card-image" style="position:relative;">${imgHtml}</div>
@@ -101,7 +101,7 @@ const ProductsPage = (() => {
                     }
                     return '<span class="no-image" style="display:inline-block; width:36px; height:36px; line-height:36px; text-align:center; background:var(--clr-surface-border); border-radius:var(--radius-sm); font-size:10px;">None</span>';
                 }},
-                { key: 'ProductName', label: 'Product', render: v => v ? String(v).replace(/</g, '&lt;').replace(/>/g, '&gt;') : '—' },
+                { key: 'ProductName', label: 'Product', render: v => v ? window.t(String(v)).replace(/</g, '&lt;').replace(/>/g, '&gt;') : '—' },
                 { key: 'supplier_name', label: 'Supplier', render: v => v ? String(v).replace(/</g, '&lt;').replace(/>/g, '&gt;') : '—' },
                 { key: 'UnitPrice', label: 'Price', render: v => `EGP ${parseFloat(v||0).toLocaleString()}` },
                 { key: 'Stock', label: 'Stock', render: (v, row) => {
