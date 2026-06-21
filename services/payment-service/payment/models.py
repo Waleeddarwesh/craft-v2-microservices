@@ -80,3 +80,18 @@ class StripeWebhookEvent(models.Model):
 
     def __str__(self):
         return f"{self.event_type} - {self.event_id}"
+
+class WithdrawalRequest(models.Model):
+    user_id = models.BigIntegerField(help_text="The supplier or instructor requesting the withdrawal.")
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    bank_account_details = models.TextField()
+    status = models.CharField(
+        max_length=50,
+        default='pending',
+        choices=[('pending', 'Pending'), ('approved', 'Approved'), ('rejected', 'Rejected'), ('processed', 'Processed')]
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Withdrawal #{self.id} for User {self.user_id} - ${self.amount}"

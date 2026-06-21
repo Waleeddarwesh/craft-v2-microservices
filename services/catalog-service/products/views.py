@@ -67,6 +67,8 @@ class ProductViewSet(viewsets.ModelViewSet):
         No lookup against accounts.Supplier is needed.
         """
         product = serializer.save(supplier_id=self.request.user.id)
+        
+        # Publish event
         EventPublisher().publish(
             ProductCreatedEvent(
                 product_id=product.id,
@@ -75,6 +77,25 @@ class ProductViewSet(viewsets.ModelViewSet):
                 price=str(product.price),
             )
         )
+
+        # Trigger Approval Request synchronously (Option A)
+        import requests
+        try:
+            requests.post(
+                "http://admin-service:8000/api/workflows/approvals/",
+                json={
+                    "request_type": "product_approval",
+                    "related_object_type": "product",
+                    "related_object_id": str(product.id),
+                    "assigned_department": "Catalog",
+                    "status": "pending"
+                },
+                headers={"Authorization": self.request.headers.get("Authorization", "")},
+                timeout=3
+            )
+        except requests.RequestException as e:
+            import logging
+            logging.error(f"Failed to trigger product approval: {e}")
 
     def perform_update(self, serializer):
         product = serializer.save()

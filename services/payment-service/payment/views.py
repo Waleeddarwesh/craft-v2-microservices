@@ -191,3 +191,38 @@ class PaymentHistoryView(APIView):
         ).order_by("-date")
         serializer = PaymentHistorySerializer(payments, many=True)
         return Response(serializer.data)
+
+# ─── Withdrawal Requests ─────────────────────────────────────────────────────
+
+from rest_framework import viewsets
+from .models import WithdrawalRequest
+from .serializers import WithdrawalRequestSerializer
+
+class WithdrawalRequestViewSet(viewsets.ModelViewSet):
+    serializer_class = WithdrawalRequestSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return WithdrawalRequest.objects.filter(user_id=self.request.user.id)
+
+    def perform_create(self, serializer):
+        withdrawal = serializer.save(user_id=self.request.user.id)
+        
+        # Trigger Approval Request synchronously in admin-service
+        import requests
+        try:
+            requests.post(
+                "http://admin-service:8000/api/workflows/approvals/",
+                json={
+                    "request_type": "withdrawal_approval",
+                    "related_object_type": "withdrawal",
+                    "related_object_id": str(withdrawal.id),
+                    "assigned_department": "Finance",
+                    "status": "pending"
+                },
+                headers={"Authorization": self.request.headers.get("Authorization", "")},
+                timeout=3
+            )
+        except requests.RequestException as e:
+            import logging
+            logging.error(f"Failed to trigger withdrawal approval: {e}")

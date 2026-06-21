@@ -20,8 +20,14 @@ class CourseInformationSerializer(serializers.Serializer):
         return value
 
         return value
-from .models import PaymentHistory
+from .models import PaymentHistory, WithdrawalRequest
 class PaymentHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = PaymentHistory
         fields = '__all__'
+
+class WithdrawalRequestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WithdrawalRequest
+        fields = '__all__'
+        read_only_fields = ['status', 'created_at', 'updated_at', 'user_id']
