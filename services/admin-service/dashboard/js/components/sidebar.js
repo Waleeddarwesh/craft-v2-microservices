@@ -37,15 +37,7 @@ const Sidebar = (() => {
                 { route: 'coupons', label: window.t('Coupons'), icon: 'coupons' },
             ]
         },
-        {
-            section: window.t('Operations'), items: [
-                { route: 'supplier-performance', label: window.t('Supplier Performance'), icon: 'products' },
-                { route: 'delivery-performance', label: window.t('Delivery Performance'), icon: 'orders' },
-                { route: 'fraud-alerts', label: window.t('Fraud Alerts'), icon: 'audit' },
-                { route: 'support-tickets', label: window.t('Support Tickets'), icon: 'notifications' },
-                { route: 'disputes', label: window.t('Disputes'), icon: 'notifications' },
-            ]
-        },
+        
         {
             section: window.t('Content'), items: [
                 { route: 'courses', label: window.t('Courses'), icon: 'courses' },
@@ -61,6 +53,10 @@ const Sidebar = (() => {
                 { route: 'audit-logs', label: window.t('Audit Logs'), icon: 'audit' },
             ]
         },
+        
+        
+        
+        
         {
             section: window.t('System'), items: [
                 { route: 'settings', label: window.t('Settings'), icon: 'settings' },

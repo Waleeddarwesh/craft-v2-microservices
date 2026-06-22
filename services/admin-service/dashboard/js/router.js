@@ -32,7 +32,20 @@ const Router = (() => {
             'fraud-alerts': 'Fraud Alerts', 'product-moderation': 'Product Moderation',
             reconciliation: 'Financial Reconciliation',
             'audit-logs': 'Audit Logs', settings: 'Settings',
-            'system-health': 'System Health'
+            'system-health': 'System Health',
+            servers: 'Servers Inventory',
+            services: 'Services Registry',
+            'users-linux': 'Linux User Administration',
+            'system-logs': 'System Logs',
+            storage: 'Storage Administration',
+            backups: 'Backup & Recovery',
+            'cron-jobs': 'Cron Job Administration',
+            'security-center': 'Security Center',
+            'config-management': 'Configuration Management',
+            'file-explorer': 'File Explorer',
+            containers: 'Container Operations',
+            incidents: 'Incident Management',
+            automation: 'Operational Scripts'
         };
         
         let breadcrumbHtml = '';

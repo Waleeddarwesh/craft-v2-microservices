@@ -98,6 +98,19 @@
         Router.register('settings', SettingsPage.render);
         Router.register('api-docs', ApiDocsPage.render);
         Router.register('system-health', SystemHealthPage.render);
+        Router.register('servers', window.ServersPage.render);
+        Router.register('services', window.ServicesPage.render);
+        Router.register('users-linux', window.UsersLinuxPage.render);
+        Router.register('system-logs', window.SystemLogsPage.render);
+        Router.register('storage', window.StoragePage.render);
+        Router.register('backups', window.BackupsPage.render);
+        Router.register('cron-jobs', window.CronJobsPage.render);
+        Router.register('security-center', window.SecurityCenterPage.render);
+        Router.register('config-management', window.ConfigManagementPage.render);
+        Router.register('file-explorer', window.FileExplorerPage.render);
+        Router.register('containers', window.ContainersPage.render);
+        Router.register('incidents', window.IncidentsPage.render);
+        Router.register('automation', window.AutomationPage.render);
 
         // Start router
         Router.init();

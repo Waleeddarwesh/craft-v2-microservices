@@ -92,17 +92,49 @@ window.ProductModerationPage = async function(container) {
         }
     };
 
-    window.ProductModerationPage.action = async (id, action) => {
-        const confirmMsg = action === 'approve' ? window.t('Approve this product for the marketplace?') : window.t('Reject this product listing?');
-        if (!confirm(confirmMsg)) return;
-        try {
-            await API.post(`/admin-api/moderation/products/${id}/action/`, { action: action });
-            Toast.success(window.t('Moderation action saved'));
-            window.ProductModerationPage.load();
-        } catch (err) {
-            Toast.error(window.t('Error updating product status'));
-            console.error(err);
+    window.ProductModerationPage.action = (id, action) => {
+        const title = action === 'approve' ? window.t('Approve Product') : window.t('Reject Product');
+        
+        let confirmMsg = action === 'approve' ? window.t('Approve this product for the marketplace?') : window.t('Reject this product listing?');
+        
+        if (action === 'reject') {
+            confirmMsg += `
+                <div style="margin-top: 15px;">
+                    <label for="reject-reason" style="display:block; margin-bottom:5px;">${window.t('Reason for Rejection:')}</label>
+                    <select id="reject-reason" class="form-control" style="width: 100%; background: var(--bg-dark); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 4px; padding: 8px;">
+                        <option value="Inappropriate or Offensive Content">${window.t('Inappropriate or Offensive Content')}</option>
+                        <option value="Low Quality Images">${window.t('Low Quality Images')}</option>
+                        <option value="Misleading Description">${window.t('Misleading Description')}</option>
+                        <option value="Violates Pricing Policy">${window.t('Violates Pricing Policy')}</option>
+                        <option value="Counterfeit or Prohibited Item">${window.t('Counterfeit or Prohibited Item')}</option>
+                        <option value="Duplicate Listing">${window.t('Duplicate Listing')}</option>
+                        <option value="Missing Information">${window.t('Missing Information')}</option>
+                        <option value="Other">${window.t('Other')}</option>
+                    </select>
+                </div>
+            `;
         }
+
+        const confirmText = action === 'approve' ? window.t('Approve') : window.t('Reject');
+        const type = action === 'approve' ? 'primary' : 'danger';
+
+        Modal.confirm(title, confirmMsg, async () => {
+            try {
+                const payload = { action: action };
+                if (action === 'reject') {
+                    const reasonSelect = document.getElementById('reject-reason');
+                    if (reasonSelect) {
+                        payload.reason = reasonSelect.value;
+                    }
+                }
+                await API.post(`/admin-api/moderation/products/${id}/action/`, payload);
+                Toast.success(window.t('Moderation action saved'));
+                window.ProductModerationPage.load();
+            } catch (err) {
+                Toast.error(window.t('Error updating product status'));
+                console.error(err);
+            }
+        }, confirmText, type);
     };
 
     window.ProductModerationPage.viewDetails = (id) => {

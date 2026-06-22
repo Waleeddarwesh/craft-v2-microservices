@@ -56,6 +56,7 @@ class Product(models.Model):
     width = models.DecimalField(max_digits=10, decimal_places=2,blank=True, null=True,validators=(MinValueValidator(0.0), MaxValueValidator(1000.0)))
     height = models.DecimalField(max_digits=10, decimal_places=2,blank=True, null=True,validators=(MinValueValidator(0.0), MaxValueValidator(1000.0)))
     watt = models.DecimalField(max_digits=10, decimal_places=2,blank=True, null=True,validators=(MinValueValidator(0.0), MaxValueValidator(1000.0)))
+    rejection_reason = models.TextField(blank=True, null=True)
     
     class Meta:
         indexes = [

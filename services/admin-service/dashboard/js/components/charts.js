@@ -22,14 +22,55 @@ const Charts = (() => {
     }
 
     function line(canvasId, labels, datasets, opts = {}) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return null;
+        const ctx = canvas.getContext('2d');
+        
         return base('line', canvasId, {
-            data: { labels, datasets: datasets.map((ds, i) => ({
-                borderColor: palette[i], backgroundColor: palette[i] + '20',
-                borderWidth: 2, pointRadius: 3, pointHoverRadius: 5,
-                tension: 0.4, fill: true, ...ds
-            }))},
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: datasets.length > 1, labels: { boxWidth: 12, padding: 16 } } },
-                scales: { x: { grid: { color: defaultColors.grid } }, y: { grid: { color: defaultColors.grid }, beginAtZero: true } }, ...opts }
+            data: { labels, datasets: datasets.map((ds, i) => {
+                const color = palette[i % palette.length];
+                let gradient = ctx.createLinearGradient(0, 0, 0, 350);
+                gradient.addColorStop(0, color + '66'); // 40% opacity
+                gradient.addColorStop(1, color + '00'); // 0% opacity
+                
+                return {
+                    borderColor: color, 
+                    backgroundColor: gradient,
+                    borderWidth: 3, 
+                    pointRadius: 4, 
+                    pointBackgroundColor: '#1a1d20', 
+                    pointBorderColor: color,
+                    pointBorderWidth: 2,
+                    pointHoverRadius: 6,
+                    tension: 0.4, 
+                    fill: true, 
+                    ...ds
+                };
+            })},
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                interaction: { mode: 'index', intersect: false },
+                plugins: { 
+                    legend: { display: datasets.length > 1, labels: { boxWidth: 12, padding: 16 } },
+                    tooltip: {
+                        backgroundColor: 'rgba(24, 28, 32, 0.95)',
+                        titleColor: '#e2e8f0',
+                        bodyColor: '#cbd5e1',
+                        borderColor: 'rgba(255,255,255,0.08)',
+                        borderWidth: 1,
+                        padding: 12,
+                        cornerRadius: 8,
+                        displayColors: true,
+                        usePointStyle: true,
+                    }
+                },
+                scales: { 
+                    x: { grid: { display: false } }, 
+                    y: { grid: { color: defaultColors.grid, borderDash: [4, 4], drawBorder: false }, beginAtZero: true } 
+                }, 
+                ...opts 
+            }
         });
     }
 

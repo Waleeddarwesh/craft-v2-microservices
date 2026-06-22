@@ -85,7 +85,7 @@ const DataTable = (() => {
             }
             pag += `<button ${state.page >= tp ? 'disabled' : ''} onclick="DataTable._instances['${id}'].setPage(${state.page + 1})">›</button>`;
 
-            const searchHTML = searchable ? `<div class="form-search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input class="form-input" placeholder="${window.t('Search...')}" value="${state.search}" oninput="DataTable._instances['${id}'].search(this.value)"></div>` : '';
+            const searchHTML = searchable ? `<div class="form-search"><svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input class="form-input" placeholder="${window.t('Search...')}" value="${state.search}" oninput="DataTable._instances['${id}'].search(this.value)"></div>` : '';
 
             wrapper.innerHTML = `<div class="data-table-wrapper">
                 <div class="data-table-toolbar">${searchHTML}<div class="page-info" style="font-size:var(--fs-xs);color:var(--clr-text-muted)">${state.filtered.length} ${window.t('records')}</div></div>

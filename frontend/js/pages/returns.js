@@ -88,7 +88,14 @@ const ReturnsPage = (() => {
             const body = `
                 <div class="form-group">
                     <label class="form-label">${window.t('Rejection Reason')}</label>
-                    <textarea id="reject-reason" class="form-input" style="width:100%; height:80px" placeholder="${window.t('Please provide a reason for rejecting this return request...')}"></textarea>
+                    <select id="reject-reason" class="form-control" style="width: 100%; background: var(--bg-dark); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 4px; padding: 8px;">
+                        <option value="Item not in original condition">${window.t('Item not in original condition')}</option>
+                        <option value="Outside of return window">${window.t('Outside of return window')}</option>
+                        <option value="Damage caused by customer">${window.t('Damage caused by customer')}</option>
+                        <option value="Wrong item returned">${window.t('Wrong item returned')}</option>
+                        <option value="Suspected fraud or abuse">${window.t('Suspected fraud or abuse')}</option>
+                        <option value="Other">${window.t('Other')}</option>
+                    </select>
                 </div>
             `;
             const footer = `
@@ -128,8 +135,7 @@ const ReturnsPage = (() => {
                 <div class="detail-item"><span class="detail-label">Quantity</span><span class="detail-value">${ret.quantity}</span></div>
                 <div class="detail-item"><span class="detail-label">Amount</span><span class="detail-value">EGP ${parseFloat(ret.amount||0).toFixed(2)}</span></div>
                 <div class="detail-item"><span class="detail-label">Reason</span><span class="detail-value">${(ret.reason||'').replace(/_/g,' ')}</span></div>
-                ${ret.admin_notes ? `<div class="detail-item"><span class="detail-label">${window.t('Rejection Reason')}</span><span class="detail-value">${ret.admin_notes}</span></div>` : ''}
-                <div class="detail-item"><span class="detail-label">Status</span><span class="detail-value"><span class="badge badge-${STATUS_MAP[ret.status]||'neutral'}">${window.t(ret.status)}</span></span></div>
+                <div class="detail-item"><span class="detail-label">Status</span><span class="detail-value"><span class="badge badge-${STATUS_MAP[ret.status]||'neutral'}">${ret.status}</span></span></div>
                 <div class="detail-item"><span class="detail-label">Date</span><span class="detail-value">${ret.created_at ? new Date(ret.created_at).toLocaleString() : ''}</span></div>
             </div>
             ${ret.image ? `<div class="mt-4"><img src="${Auth.getApiBase()}${ret.image}" style="max-width:100%;border-radius:var(--radius-md)"/></div>` : ''}`;

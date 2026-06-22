@@ -252,7 +252,8 @@
 }
 
 .form-search input {
-   padding-left: 40px
+   padding-left: 40px;
+   border-radius: var(--radius-full);
 }
 
 /* ─── Data Table ─── */

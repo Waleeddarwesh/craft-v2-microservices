@@ -84,14 +84,45 @@ const ReturnsPage = (() => {
     }
 
     async function action(id, act) {
-        const actionText = act === 'accept' ? 'Accept' : 'Reject';
-        Modal.confirm(`${actionText} Return Request`, `Are you sure you want to ${act} this return request?`, async () => {
+        if (act === 'reject') {
+            const body = `
+                <div class="form-group">
+                    <label class="form-label">${window.t('Rejection Reason')}</label>
+                    <select id="reject-reason" class="form-control" style="width: 100%; background: var(--bg-dark); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 4px; padding: 8px;">
+                        <option value="Item not in original condition">${window.t('Item not in original condition')}</option>
+                        <option value="Outside of return window">${window.t('Outside of return window')}</option>
+                        <option value="Damage caused by customer">${window.t('Damage caused by customer')}</option>
+                        <option value="Wrong item returned">${window.t('Wrong item returned')}</option>
+                        <option value="Suspected fraud or abuse">${window.t('Suspected fraud or abuse')}</option>
+                        <option value="Other">${window.t('Other')}</option>
+                    </select>
+                </div>
+            `;
+            const footer = `
+                <button class="btn btn-ghost" onclick="Modal.close()">${window.t('Cancel')}</button>
+                <button class="btn btn-danger" onclick="ReturnsPage.submitReject('${id}')">${window.t('Reject')}</button>
+            `;
+            Modal.open(window.t('Reject Return Request'), body, footer);
+            return;
+        }
+
+        Modal.confirm(window.t('Accept Return Request'), window.t('Are you sure you want to accept this return request?'), async () => {
             try {
-                await API.post(`/admin-api/returns/${id}/action/`, { action: act });
-                Toast.success(`Return request ${act}ed successfully`);
+                await API.post(`/admin-api/returns/${id}/action/`, { action: 'accept' });
+                Toast.success(window.t('Return request accepted successfully'));
                 await loadReturns();
             } catch(e) { Toast.error(e.message); }
-        }, actionText, act === 'accept' ? 'success' : 'danger');
+        }, window.t('Accept'), 'success');
+    }
+
+    async function submitReject(id) {
+        const reason = document.getElementById('reject-reason').value.trim();
+        try {
+            await API.post(`/admin-api/returns/${id}/action/`, { action: 'reject', admin_notes: reason });
+            Toast.success(window.t('Return request rejected successfully'));
+            Modal.close();
+            await loadReturns();
+        } catch(e) { Toast.error(e.message); }
     }
 
     async function view(id) {
@@ -126,5 +157,5 @@ const ReturnsPage = (() => {
         DataExport.exportToCSV('returns_export.csv', headers, dataRows);
     }
 
-    return { render, action, view, applyFilter, exportData };
+    return { render, action, submitReject, view, applyFilter, exportData };
 })();
