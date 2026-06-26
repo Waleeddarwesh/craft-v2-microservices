@@ -29,7 +29,23 @@ try:
     from products.models import Product, ProImage
     from returnrequest.models import ReturnRequest, Transaction, BalanceWithdrawRequest
 except ImportError:
-    pass
+    Review = None
+    User = None
+    Customer = None
+    Supplier = None
+    Delivery = None
+    Course = None
+    Enrollment = None
+    Notification = None
+    Order = None
+    OrderItem = None
+    Coupon = None
+    PaymentHistory = None
+    Product = None
+    ProImage = None
+    ReturnRequest = None
+    Transaction = None
+    BalanceWithdrawRequest = None
 from audit_logs.models import AuditLog
 from audit_logs.utils import log_audit_action
 
@@ -354,6 +370,30 @@ class AdminChartsView(APIView):
             'status_labels': status_labels or ['No Data'],
             'status_data': status_data or [0],
         })
+def get_date_range_for_period(period_string):
+    from django.utils import timezone
+    import datetime
+    now = timezone.now()
+    if period_string == 'today':
+        current_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        current_end = now
+        prev_start = current_start - datetime.timedelta(days=1)
+        prev_end = current_start - datetime.timedelta(microseconds=1)
+    elif period_string == 'this_year':
+        current_start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+        current_end = now
+        prev_start = current_start.replace(year=current_start.year - 1)
+        prev_end = current_start - datetime.timedelta(microseconds=1)
+    else: # 'this_month'
+        current_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        current_end = now
+        if current_start.month == 1:
+            prev_start = current_start.replace(year=current_start.year-1, month=12)
+        else:
+            prev_start = current_start.replace(month=current_start.month-1)
+        prev_end = current_start - datetime.timedelta(microseconds=1)
+    return current_start, current_end, prev_start, prev_end
+
 
 
 class AdminSystemReportsView(APIView):
@@ -377,12 +417,10 @@ class AdminSystemReportsView(APIView):
                 prev_start = current_start - delta
                 prev_end = current_start
             except ValueError:
-                from reports.services import get_date_range_for_period
-                current_start, current_end, prev_start, prev_end = get_date_range_for_period(period_string='this_month')
+                current_start, current_end, prev_start, prev_end = get_date_range_for_period('this_month')
         else:
-            from reports.services import get_date_range_for_period
             try:
-                current_start, current_end, prev_start, prev_end = get_date_range_for_period(period_string=period)
+                current_start, current_end, prev_start, prev_end = get_date_range_for_period(period)
             except Exception:
                 return Response({"error": _("Invalid period")}, status=status.HTTP_400_BAD_REQUEST)
         from Handcrafts.business_config import (
@@ -516,281 +554,148 @@ class AdminSystemReportsView(APIView):
 # =============================================================================
 
 class AdminOrdersView(APIView):
-    """List all orders (optionally filtered by date)."""
+    """List all orders (proxied from order-service)."""
     permission_classes = [IsDashboardUser]
 
     def get(self, request):
-        orders = Order.objects.select_related('user').all()
+        from internal.service_client import ServiceClient
         
-        start_date = request.GET.get('start_date')
-        end_date = request.GET.get('end_date')
-        if start_date:
-            orders = orders.filter(created_at__date__gte=start_date)
-        if end_date:
-            orders = orders.filter(created_at__date__lte=end_date)
+        # Proxy request to order-service's admin endpoint
+        response = ServiceClient.proxy_request('order-service', '/admin-api/orders/', request)
+        if response.status_code != 200:
+            return response
             
-        if not request.user.is_superuser and getattr(request.user, 'is_supplier', False):
-            orders = orders.filter(items__product__Supplier__user=request.user).distinct()
-        elif not request.user.is_superuser and getattr(request.user, 'is_delivery', False):
-            orders = orders.filter(shipments__delivery__user=request.user).distinct()
-            
-        orders = orders.select_related('user', 'address').prefetch_related('items__product').order_by('-created_at')[:200]
-        data = [{
-            'id': str(o.id),
-            'order_number': o.order_number,
-            'user_email': o.user.email,
-            'total_amount': float(o.total_amount),
-            'discount_amount': float(o.discount_amount),
-            'delivery_fee': float(o.delivery_fee),
-            'final_amount': float(o.final_amount),
-            'payment_method': o.payment_method,
-            'status': o.status,
-            'paid': o.paid,
-            'created_at': o.created_at.isoformat(),
-            'items': [{
-                'product_name': item.product.ProductName,
-                'quantity': item.quantity,
-                'price': float(item.price),
-            } for item in o.items.all()],
-        } for o in orders]
+        data = response.data
+        
+        # Extract unique user_ids and product_ids to fetch real details
+        user_ids = {item['user_id'] for item in data if 'user_id' in item}
+        product_ids = set()
+        for item in data:
+            if 'items' in item:
+                for i in item['items']:
+                    if 'product_name' in i and str(i['product_name']).startswith("Product "):
+                        try:
+                            product_ids.add(int(i['product_name'].replace("Product ", "")))
+                        except ValueError:
+                            pass
+        
+        try:
+            # Stitch User Emails
+            if user_ids:
+                from accounts.models import User
+                users = User.objects.filter(id__in=user_ids).values('id', 'email')
+                user_map = {u['id']: u['email'] for u in users}
+                for item in data:
+                    if item.get('user_id') in user_map:
+                        item['user_email'] = user_map[item['user_id']]
+                        
+            # Stitch Product Names
+            if product_ids:
+                from products.models import Product
+                products = Product.objects.filter(id__in=product_ids).values('id', 'ProductName')
+                prod_map = {p['id']: p['ProductName'] for p in products}
+                for item in data:
+                    if 'items' in item:
+                        for i in item['items']:
+                            if 'product_name' in i and str(i['product_name']).startswith("Product "):
+                                try:
+                                    pid = int(i['product_name'].replace("Product ", ""))
+                                    if pid in prod_map:
+                                        i['product_name'] = prod_map[pid]
+                                except ValueError:
+                                    pass
+        except ImportError:
+            pass
+                
         return Response(data)
 
 
 class AdminProductsView(APIView):
-    """List all products for admin dashboard."""
+    """List all products for admin dashboard (proxied from catalog-service)."""
     permission_classes = [IsDashboardUser]
 
     def get(self, request):
-        products = Product.objects.select_related('Supplier__user').prefetch_related('images').all()
-        if not request.user.is_superuser and getattr(request.user, 'is_supplier', False):
-            products = products.filter(Supplier__user=request.user)
-        products = products[:500]
-        data = [{
-            'id': p.id,
-            'ProductName': p.__dict__.get('ProductName_en') or p.__dict__.get('ProductName_ar') or p.__dict__.get('ProductName') or getattr(p, 'ProductName', ''),
-            'UnitPrice': float(p.UnitPrice),
-            'Stock': p.Stock,
-            'OutOfStock': p.OutOfStock,
-            'Rating': float(p.Rating),
-            'NumberOfRatings': p.NumberOfRatings if hasattr(p, 'NumberOfRatings') else 0,
-            'DiscountPercentage': float(p.DiscountPercentage) if p.DiscountPercentage else 0,
-            'supplier_name': f"{p.Supplier.user.first_name} {p.Supplier.user.last_name}" if p.Supplier else '',
-            'images': [{'image': img.image.url if img.image else ''} for img in p.images.all()[:3]],
-        } for p in products]
-        return Response(data)
+        from internal.service_client import ServiceClient
+        response = ServiceClient.proxy_request('catalog-service', '/admin-api/products/', request)
+        return Response(response.data, status=response.status_code)
 
 
 class AdminReturnsView(APIView):
-    """List all return requests."""
+    """List all return requests (proxied from order-service)."""
     permission_classes = [IsDashboardUser]
 
     def get(self, request):
-        returns = ReturnRequest.objects.select_related('product', 'order__user').all()
-        if not request.user.is_superuser and getattr(request.user, 'is_supplier', False):
-            returns = returns.filter(product__Supplier__user=request.user)
-        
-        start_date = request.GET.get('start_date')
-        end_date = request.GET.get('end_date')
-        if start_date:
-            returns = returns.filter(created_at__date__gte=start_date)
-        if end_date:
-            returns = returns.filter(created_at__date__lte=end_date)
-            
-        if not request.user.is_superuser and getattr(request.user, 'is_supplier', False):
-            returns = returns.filter(order__items__product__Supplier__user=request.user).distinct()
-            
-        returns = returns.order_by('-created_at')[:300]
-        data = [{
-            'id': str(r.id),
-            'product_name': r.product.ProductName if r.product else '',
-            'customer_name': f"{r.user.first_name} {r.user.last_name}" if r.user else '',
-            'quantity': r.quantity,
-            'amount': float(r.amount) if r.amount else 0,
-            'reason': r.reason,
-            'admin_notes': r.admin_notes,
-            'status': r.status,
-            'image': r.image.url if r.image else None,
-            'created_at': r.created_at.isoformat() if r.created_at else None,
-        } for r in returns]
-        return Response(data)
+        from internal.service_client import ServiceClient
+        response = ServiceClient.proxy_request('order-service', '/admin-api/returns/', request)
+        return Response(response.data, status=response.status_code)
 
 
 class AdminCoursesView(APIView):
-    """List all courses for admin dashboard."""
+    """List all courses (proxied from catalog-service)."""
     permission_classes = [IsDashboardUser]
 
     def get(self, request):
-        courses = Course.objects.select_related(
-            'Supplier__user', 'CategoryID'
-        ).annotate(
-            enrollment_count=Count('enrollments')
-        ).all()
-        
-        if not request.user.is_superuser and getattr(request.user, 'is_supplier', False):
-            courses = courses.filter(Supplier__user=request.user)
-        data = [{
-            'CourseID': c.CourseID,
-            'CourseTitle': c.__dict__.get('CourseTitle_en') or c.__dict__.get('CourseTitle_ar') or c.__dict__.get('CourseTitle') or getattr(c, 'CourseTitle', ''),
-            'Price': float(c.Price),
-            'Rating': float(c.Rating),
-            'NumberOfRatings': c.NumberOfRatings,
-            'Thumbnail': c.Thumbnail.url if c.Thumbnail else None,
-            'supplier_name': f"{c.Supplier.user.first_name} {c.Supplier.user.last_name}" if c.Supplier else '',
-            'enrollments_count': c.enrollment_count,
-            'completed': c.completed,
-            'CourseHours': c.CourseHours,
-            'NumberOfLec': c.NumberOfLec,
-        } for c in courses]
-        return Response(data)
+        from internal.service_client import ServiceClient
+        response = ServiceClient.proxy_request('catalog-service', '/admin-api/courses/', request)
+        return Response(response.data, status=response.status_code)
 
 
 class AdminReviewsView(APIView):
-    """List all reviews for admin dashboard."""
+    """List all reviews (proxied from platform-service)."""
     permission_classes = [IsDashboardUser]
 
     def get(self, request):
-        reviews = Review.objects.select_related('customer__user', 'product', 'course').all()
-        
-        if not request.user.is_superuser and getattr(request.user, 'is_supplier', False):
-            reviews = reviews.filter(product__Supplier__user=request.user)
-            
-        reviews = reviews.order_by('-created_at')[:300]
-        data = [{
-            'id': r.id,
-            'customer_name': f"{r.customer.user.first_name} {r.customer.user.last_name}" if r.customer else '',
-            'product_name': r.product.ProductName if r.product else '',
-            'course_name': r.course.CourseTitle if r.course else '',
-            'rating': r.rating,
-            'comment': r.comment,
-            'created_at': r.created_at.isoformat() if r.created_at else None,
-        } for r in reviews]
-        return Response(data)
+        from internal.service_client import ServiceClient
+        response = ServiceClient.proxy_request('platform-service', '/admin-api/reviews/', request)
+        return Response(response.data, status=response.status_code)
 
 
 class AdminCouponsView(APIView):
-    """List all coupons for admin dashboard."""
+    """List all coupons (proxied from order-service)."""
     permission_classes = [IsDashboardUser]
 
     def get(self, request):
-        coupons = Coupon.objects.select_related('supplier__user').all()
-        
-        if not request.user.is_superuser and getattr(request.user, 'is_supplier', False):
-            coupons = coupons.filter(supplier__user=request.user)
-        data = [{
-            'id': c.id,
-            'code': c.code,
-            'supplier_name': f"{c.supplier.user.first_name} {c.supplier.user.last_name}" if c.supplier else '',
-            'discount': float(c.discount),
-            'discount_type': c.discount_type,
-            'active': c.active and (c.valid_to >= timezone.now() if c.valid_to else True),
-            'valid_from': c.valid_from.isoformat() if c.valid_from else None,
-            'valid_to': c.valid_to.isoformat() if c.valid_to else None,
-            'max_uses': c.max_uses,
-            'uses_count': c.uses_count,
-            'min_purchase_amount': float(c.min_purchase_amount),
-        } for c in coupons]
-        return Response(data)
+        from internal.service_client import ServiceClient
+        response = ServiceClient.proxy_request('order-service', '/admin-api/coupons/', request)
+        return Response(response.data, status=response.status_code)
 
 
 class AdminTransactionsView(APIView):
     """List all transactions for admin dashboard."""
     permission_classes = [IsDashboardUser]
+    """List all transactions (proxied from payment-service)."""
+    permission_classes = [IsDashboardUser]
 
     def get(self, request):
-        txns = Transaction.objects.select_related('user').all()
-        
-        if not request.user.is_superuser:
-            txns = txns.filter(user=request.user)
-            
-        txns = txns.order_by('-created_at')[:300]
-        data = [{
-            'id': str(t.id),
-            'user_email': t.user.email if t.user else '',
-            'transaction_type': t.transaction_type,
-            'amount': float(t.amount),
-            'created_at': t.created_at.isoformat() if t.created_at else None,
-        } for t in txns]
-        return Response(data)
+        from internal.service_client import ServiceClient
+        response = ServiceClient.proxy_request('payment-service', '/admin-api/transactions/', request)
+        return Response(response.data, status=response.status_code)
 
 
 class AdminWithdrawalsListView(APIView):
-    """List all withdrawal requests for admin dashboard."""
+    """List all withdrawal requests (proxied from payment-service)."""
     permission_classes = [IsDashboardUser]
 
     def get(self, request):
-        withdrawals = BalanceWithdrawRequest.objects.select_related('user').all()
-        
-        if not request.user.is_superuser:
-            withdrawals = withdrawals.filter(user=request.user)
-            
-        withdrawals = withdrawals.order_by('-created_at')[:300]
-        data = [{
-            'id': str(w.id),
-            'user_name': f"{w.user.first_name} {w.user.last_name}" if w.user else '',
-            'amount': float(w.amount),
-            'transfer_type': w.transfer_type,
-            'transfer_number': w.transfer_number,
-            'transfer_status': w.transfer_status,
-            'risk_score': float(w.risk_score) if hasattr(w, 'risk_score') and w.risk_score else 0,
-            'user_balance': float(w.user.Balance + (w.amount if w.transfer_status in ['Requested', 'Awaiting Approval'] else 0)) if w.user and hasattr(w.user, 'Balance') else 0.0,
-            'notes': w.notes if hasattr(w, 'notes') else '',
-            'admin_notes': w.admin_notes if hasattr(w, 'admin_notes') else '',
-            'created_at': w.created_at.isoformat() if w.created_at else None,
-        } for w in withdrawals]
-        return Response(data)
+        from internal.service_client import ServiceClient
+        response = ServiceClient.proxy_request('payment-service', '/admin-api/withdrawals/', request)
+        return Response(response.data, status=response.status_code)
 
 
 class AdminNotificationsView(APIView):
-    """List all notifications for the current dashboard user/department."""
+    """List all notifications for the current dashboard user/department (proxied from realtime-service)."""
     permission_classes = [IsDashboardUser]
 
     def get(self, request):
-        user = request.user
-        roles = []
-        if hasattr(user, 'roles'):
-            roles = [role.name for role in user.roles.all()]
-        
-        departments = roles[:]
-        if user.is_superuser or 'admin' in roles or 'super_admin' in roles:
-            departments.append('Admin')
-        if 'support' in roles:
-            departments.append('Support')
-            
-        from django.db.models import Q
-        notifs = Notification.objects.filter(
-            Q(user=user) | Q(department__in=departments)
-        ).select_related('user').order_by('-timestamp')[:200]
-        
-        data = [{
-            'id': n.id,
-            'user_email': n.user.email if n.user else '',
-            'department': n.department,
-            'message': n.message,
-            'image_url': n.image_url,
-            'is_read': n.is_read,
-            'timestamp': n.timestamp.isoformat() if n.timestamp else None,
-        } for n in notifs]
-        return Response(data)
+        from internal.service_client import ServiceClient
+        response = ServiceClient.proxy_request('realtime-service', '/admin-api/notifications/', request)
+        return Response(response.data, status=response.status_code)
 
     def post(self, request):
-        """Mark all notifications as read."""
-        user = request.user
-        roles = []
-        if hasattr(user, 'roles'):
-            roles = [role.name for role in user.roles.all()]
-        
-        departments = roles[:]
-        if user.is_superuser or 'admin' in roles or 'super_admin' in roles:
-            departments.append('Admin')
-        if 'support' in roles:
-            departments.append('Support')
-            
-        from django.db.models import Q
-        Notification.objects.filter(
-            Q(user=user) | Q(department__in=departments),
-            is_read=False
-        ).update(is_read=True)
-        return Response({'status': 'all marked as read'})
+        """Mark all notifications as read (proxied)."""
+        from internal.service_client import ServiceClient
+        response = ServiceClient.proxy_request('realtime-service', '/admin-api/notifications/', request)
+        return Response(response.data, status=response.status_code)
 
 
 # =============================================================================
@@ -962,104 +867,42 @@ class AdminDeliveryApprovalView(APIView):
             return Response({'error': _('Delivery person not found')}, status=status.HTTP_404_NOT_FOUND)
 
 
-class AdminReturnActionView(APIView):
-    """Accept, reject, or cancel a return request."""
-    permission_classes = [IsDashboardUser, require_permission('accounts.can_refund_orders')]
-
-    def post(self, request, pk):
-        try:
-            ret = ReturnRequest.objects.get(pk=pk)
-        except ReturnRequest.DoesNotExist:
-            return Response({'error': _('Return request not found')}, status=status.HTTP_404_NOT_FOUND)
-
-        action = request.data.get('action')
-        if action == 'accept':
-            ret.approve_by_supplier()
-        elif action == 'reject':
-            admin_notes = request.data.get('admin_notes')
-            ret.reject_by_supplier(admin_reason=admin_notes)
-        elif action == 'cancel':
-            ret.cancel()
-        else:
-            return Response({'error': _('Invalid action')}, status=status.HTTP_400_BAD_REQUEST)
-
-        return Response({'status': _('Return {action}ed').format(action=action), 'new_status': ret.status})
-
-
 class AdminWithdrawalActionView(APIView):
-    """Approve or reject a withdrawal request."""
-    permission_classes = [IsDashboardUser, require_permission('accounts.can_approve_withdrawals')]
+    """Approve or reject a withdrawal (proxied from payment-service)."""
+    permission_classes = [IsDashboardUser]
 
     def post(self, request, pk):
-        try:
-            wd = BalanceWithdrawRequest.objects.get(pk=pk)
-        except BalanceWithdrawRequest.DoesNotExist:
-            return Response({'error': _('Withdrawal not found')}, status=status.HTTP_404_NOT_FOUND)
+        from internal.service_client import ServiceClient
+        response = ServiceClient.proxy_request('payment-service', f'/admin-api/withdrawals/{pk}/action/', request)
+        return Response(response.data, status=response.status_code)
 
-        action = request.data.get('action')
-        admin_notes = request.data.get('admin_notes', '')
+class AdminReturnActionView(APIView):
+    """Approve or reject a return (proxied from order-service)."""
+    permission_classes = [IsDashboardUser]
 
-        from returnrequest.services import BalanceService
-        from django.core.exceptions import ValidationError
-        
-        try:
-            if action == 'approve':
-                # Since balance is deducted on creation, we just need to approve and complete it
-                BalanceService.approve_withdrawal(wd, request.user.id, admin_notes)
-                # We automatically complete the withdrawal so it appears in the outcome immediately
-                BalanceService.process_approved_request(wd)
-            elif action == 'reject':
-                BalanceService.reject_withdrawal(wd, request.user.id, admin_notes)
-            elif action == 'complete':
-                BalanceService.process_approved_request(wd)
-            else:
-                return Response({'error': _('Invalid action')}, status=status.HTTP_400_BAD_REQUEST)
-        except ValidationError as e:
-            return Response({'error': str(e.message) if hasattr(e, 'message') else str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-        wd.refresh_from_db()
-        return Response({'status': _('Withdrawal {action}d').format(action=action), 'new_status': wd.transfer_status})
-
+    def post(self, request, pk):
+        from internal.service_client import ServiceClient
+        response = ServiceClient.proxy_request('order-service', f'/admin-api/returns/{pk}/action/', request)
+        return Response(response.data, status=response.status_code)
 
 class AdminReviewModerationView(APIView):
-    """Approve or reject a review."""
-    permission_classes = [IsDashboardUser, require_permission('accounts.can_moderate_reviews')]
+    """Approve or reject a review (proxied from platform-service)."""
+    permission_classes = [IsDashboardUser]
 
     def patch(self, request, pk):
-        try:
-            review = Review.objects.get(pk=pk)
-        except Review.DoesNotExist:
-            return Response({'error': _('Review not found')}, status=status.HTTP_404_NOT_FOUND)
-
-        new_status = request.data.get('status')
-        if new_status not in [Review.Status.APPROVED, Review.Status.REJECTED]:
-            return Response({'error': _('Invalid status')}, status=status.HTTP_400_BAD_REQUEST)
-
-        review.status = new_status
-        review.save(update_fields=['status'])
-        
-        return Response({'status': _('Review updated successfully'), 'new_status': review.status})
+        from internal.service_client import ServiceClient
+        response = ServiceClient.proxy_request('platform-service', f'/admin-api/reviews/{pk}/action/', request)
+        return Response(response.data, status=response.status_code)
 
 
 class AdminPaymentsView(APIView):
-    """List all payment history records."""
+    """List all payment history records (proxied from payment-service)."""
     permission_classes = [IsDashboardUser]
 
     def get(self, request):
-        payments = PaymentHistory.objects.select_related('user', 'order', 'course').order_by('-date')[:200]
-        data = [{
-            'id': str(p.id),
-            'user_email': p.user.email if p.user else None,
-            'order_id': str(p.order_id) if p.order_id else None,
-            'course_id': p.course_id,
-            'payment_status': p.payment_status,
-            'stripe_session_id': p.stripe_session_id,
-            'stripe_payment_intent_id': p.stripe_payment_intent_id,
-            'date': p.date.isoformat() if p.date else None,
-        } for p in payments]
-        return Response(data)
+        from internal.service_client import ServiceClient
+        response = ServiceClient.proxy_request('payment-service', '/admin-api/payments/', request)
+        return Response(response.data, status=response.status_code)
 
 
 class AdminOrderStatusView(APIView):
@@ -1128,7 +971,31 @@ class AdminSystemHealthView(APIView):
                 health["celery"] = "up"
         except Exception:
             pass
-            
+
+        # Check Prometheus
+        prometheus_url = getattr(settings, 'PROMETHEUS_URL', 'http://prometheus:9090')
+        health["prometheus"] = "down"
+        health["prometheus_url"] = getattr(settings, 'PROMETHEUS_PUBLIC_URL', 'http://localhost:9090')
+        try:
+            import urllib.request
+            req = urllib.request.urlopen(f"{prometheus_url}/-/healthy", timeout=3)
+            if req.status == 200:
+                health["prometheus"] = "up"
+        except Exception:
+            pass
+
+        # Check Grafana
+        grafana_url = getattr(settings, 'GRAFANA_URL', 'http://grafana:3000')
+        health["grafana"] = "down"
+        health["grafana_url"] = getattr(settings, 'GRAFANA_PUBLIC_URL', 'http://localhost:3000')
+        try:
+            import urllib.request
+            req = urllib.request.urlopen(f"{grafana_url}/api/health", timeout=3)
+            if req.status == 200:
+                health["grafana"] = "up"
+        except Exception:
+            pass
+
         return Response(health)
 
 class AdminTopProductsView(APIView):
@@ -1147,9 +1014,7 @@ class AdminTopProductsView(APIView):
         ).values(
             'product__id', 
             'product__ProductName', 
-            'product__ProductName_ar',
             'product__Category__Title',
-            'product__Category__Title_ar',
             'product__UnitPrice'
         ).annotate(
             total_sold=Sum('quantity'),
@@ -1158,8 +1023,8 @@ class AdminTopProductsView(APIView):
 
         data = []
         for item in top_items:
-            name = item.get('product__ProductName_ar') if lang == 'ar' and item.get('product__ProductName_ar') else item['product__ProductName']
-            cat = item.get('product__Category__Title_ar') if lang == 'ar' and item.get('product__Category__Title_ar') else item['product__Category__Title']
+            name = item['product__ProductName']
+            cat = item['product__Category__Title']
             
             data.append({
                 'id': item['product__id'],
@@ -1191,43 +1056,22 @@ class AdminRecentActivityView(APIView):
         return Response(data)
 
 class AdminSupportTicketsView(APIView):
-    """List recent support tickets."""
+    """List all support tickets (proxied from platform-service)."""
     permission_classes = [IsDashboardUser]
-    
+
     def get(self, request):
-        from support_tickets.models import Ticket
-        tickets = Ticket.objects.select_related('user').order_by('-created_at')[:100]
-        data = []
-        for t in tickets:
-            data.append({
-                'id': t.id,
-                'user_email': t.user.email if t.user else '',
-                'subject': t.subject,
-                'status': t.status,
-                'priority': t.priority,
-                'created_at': t.created_at.isoformat(),
-            })
-        return Response(data)
+        from internal.service_client import ServiceClient
+        response = ServiceClient.proxy_request('platform-service', '/admin-api/support-tickets/', request)
+        return Response(response.data, status=response.status_code)
 
 class AdminDisputesView(APIView):
-    """List recent disputes."""
+    """List all disputes (proxied from platform-service)."""
     permission_classes = [IsDashboardUser]
 
     def get(self, request):
-        from disputes.models import Dispute
-        disputes = Dispute.objects.select_related('customer', 'supplier', 'order').order_by('-created_at')[:100]
-        data = []
-        for d in disputes:
-            data.append({
-                'id': d.id,
-                'customer_email': d.customer.email if d.customer else '',
-                'supplier_email': d.supplier.email if d.supplier else '',
-                'order_number': d.order.order_number if d.order else '',
-                'status': d.status,
-                'reason': d.reason,
-                'created_at': d.created_at.isoformat(),
-            })
-        return Response(data)
+        from internal.service_client import ServiceClient
+        response = ServiceClient.proxy_request('platform-service', '/admin-api/disputes/', request)
+        return Response(response.data, status=response.status_code)
 
 class AdminGlobalSearchView(APIView):
     """Global search across Orders, Users, and Products."""
@@ -1388,64 +1232,18 @@ class AdminGlobalSearchView(APIView):
             for future in concurrent.futures.as_completed(futures):
                 try:
                     results.extend(future.result())
-                except Exception as e:
-                    pass  # Ignore failing queries to ensure smooth search experience
-                    
+                except Exception:
+                    pass
         return Response({"results": results})
 
 class AdminSendNotificationView(APIView):
-    """Send a custom notification to a specific user or all users."""
+    """Send a custom notification to a specific user or all users (proxied from realtime-service)."""
     permission_classes = [IsDashboardUser]
-    from rest_framework.parsers import MultiPartParser, FormParser
-    parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request):
-        from notifications.models import Notification
-        from accounts.models import User
-        
-        user_email = request.data.get('user_email')
-        if not user_email:
-            user_email = request.data.get('user_id')
-            
-        title = request.data.get('title')
-        message = request.data.get('message')
-        notification_type = request.data.get('type') or 'system'
-        image = request.FILES.get('image')
-        
-        if not title or not message:
-            return Response({"error": "Title and message are required"}, status=400)
-            
-        full_message = f"[{notification_type.upper()}] **{title}**\n\n{message}"
-        
-        if image:
-            # We must use image.read() to get content, but then we must use the saved name for the DB
-            image_name = default_storage.save(f"notifications/{datetime.now().strftime('%Y%m%d%H%M%S')}_{image.name}", ContentFile(image.read()))
-        else:
-            image_name = None
-
-        if user_email and str(user_email).lower() != 'all':
-            try:
-                user = User.objects.get(email__iexact=user_email)
-                Notification.objects.create(
-                    user=user,
-                    message=full_message,
-                    image=image_name
-                )
-                return Response({'success': True, 'message': 'Notification sent successfully'})
-            except User.DoesNotExist:
-                return Response({'error': f'User with email {user_email} not found'}, status=404)
-        else:
-            users = User.objects.filter(is_active=True)
-            notifications = [
-                Notification(
-                    user=u,
-                    message=full_message,
-                    image=image_name
-                ) for u in users
-            ]
-            Notification.objects.bulk_create(notifications, batch_size=100)
-            
-        return Response({"status": "success", "message": "Notification sent successfully"})
+        from internal.service_client import ServiceClient
+        response = ServiceClient.proxy_request('realtime-service', '/admin-api/notifications/send/', request)
+        return Response(response.data, status=response.status_code)
 
 class AdminUserDetailView(APIView):
     """Get detailed information about a specific user."""
@@ -1634,55 +1432,22 @@ class AdminFinancialReconciliationView(APIView):
         })
 
 class AdminFraudAlertsView(APIView):
-    """View and manage fraud alerts."""
+    """View and manage fraud alerts (proxied from platform-service)."""
     permission_classes = [IsDashboardUser, require_permission('accounts.can_view_audit_logs')]
 
     def get(self, request):
-        from audit_logs.models import FraudAlert
-        alerts = FraudAlert.objects.select_related('user').order_by('-created_at')[:200]
-        data = [{
-            'id': a.id,
-            'user_email': a.user.email if a.user else 'Unknown',
-            'user_id': a.user.id if a.user else None,
-            'reason': a.reason,
-            'risk_score': a.risk_score,
-            'status': a.status,
-            'created_at': a.created_at.isoformat() if a.created_at else None,
-        } for a in alerts]
-        return Response(data)
+        from internal.service_client import ServiceClient
+        response = ServiceClient.proxy_request('platform-service', '/admin-api/fraud-alerts/', request)
+        return Response(response.data, status=response.status_code)
 
 class AdminFraudAlertActionView(APIView):
-    """Resolve or take action on a fraud alert."""
+    """Resolve or take action on a fraud alert (proxied from platform-service)."""
     permission_classes = [IsDashboardUser, require_permission('accounts.can_suspend_users')]
     
     def post(self, request, pk):
-        from audit_logs.models import FraudAlert
-        from django.shortcuts import get_object_or_404
-        from django.utils import timezone
-        
-        alert = get_object_or_404(FraudAlert, pk=pk)
-        action = request.data.get('action')
-        
-        if action == 'resolve':
-            alert.status = FraudAlert.Status.RESOLVED
-            alert.resolved_at = timezone.now()
-            alert.resolved_by = request.user
-            if request.data.get('notes'):
-                alert.notes = request.data['notes']
-            alert.save()
-            return Response({'status': 'resolved'})
-        elif action == 'suspend_user':
-            alert.status = FraudAlert.Status.ACTION_TAKEN
-            alert.resolved_at = timezone.now()
-            alert.resolved_by = request.user
-            alert.save()
-            
-            if alert.user:
-                alert.user.is_active = False
-                alert.user.save(update_fields=['is_active'])
-            return Response({'status': 'user suspended'})
-        
-        return Response({'error': 'Invalid action'}, status=400)
+        from internal.service_client import ServiceClient
+        response = ServiceClient.proxy_request('platform-service', f'/admin-api/fraud-alerts/{pk}/action/', request)
+        return Response(response.data, status=response.status_code)
 
 class AdminProductModerationView(APIView):
     """List products pending moderation."""
@@ -1789,125 +1554,4 @@ class AdminAuditLogsView(APIView):
             'logs': data
         })
 
-# =============================================================================
-# Resolution Endpoints (Tickets & Disputes)
-# =============================================================================
 
-class AdminSupportTicketDetailView(APIView):
-    """View and respond to support tickets."""
-    permission_classes = [IsDashboardUser]
-
-    def get(self, request, pk):
-        from support_tickets.models import Ticket, TicketMessage
-        from django.shortcuts import get_object_or_404
-        
-        ticket = get_object_or_404(Ticket, pk=pk)
-        messages = ticket.messages.select_related('sender').all()
-        
-        data = {
-            'id': ticket.id,
-            'user_email': ticket.user.email if ticket.user else '',
-            'user_name': f"{ticket.user.first_name} {ticket.user.last_name}" if ticket.user else '',
-            'subject': ticket.subject,
-            'description': ticket.description,
-            'status': ticket.status,
-            'priority': ticket.priority,
-            'created_at': ticket.created_at.isoformat(),
-            'messages': [{
-                'id': m.id,
-                'sender': m.sender.email if m.sender else 'Unknown',
-                'is_admin': m.sender.is_staff if m.sender else False,
-                'message': m.message,
-                'attachment': m.attachment.url if m.attachment else None,
-                'created_at': m.created_at.isoformat(),
-            } for m in messages]
-        }
-        return Response(data)
-
-    def post(self, request, pk):
-        from support_tickets.models import Ticket, TicketMessage
-        from django.shortcuts import get_object_or_404
-        
-        ticket = get_object_or_404(Ticket, pk=pk)
-        
-        message_text = request.data.get('message')
-        status_update = request.data.get('status')
-        
-        if message_text:
-            TicketMessage.objects.create(
-                ticket=ticket,
-                sender=request.user,
-                message=message_text
-            )
-            
-        if status_update and status_update in [s[0] for s in Ticket.Status.choices]:
-            ticket.status = status_update
-            ticket.save()
-            
-            log_audit_action(
-                user=request.user,
-                action=f"Updated support ticket #{ticket.id} status to {status_update}",
-                ip_address=request.META.get('REMOTE_ADDR'),
-                content_object=ticket
-            )
-            
-        return Response({'success': True, 'message': 'Ticket updated'})
-
-class AdminDisputeDetailView(APIView):
-    """View and resolve disputes."""
-    permission_classes = [IsDashboardUser]
-
-    def get(self, request, pk):
-        from disputes.models import Dispute
-        from django.shortcuts import get_object_or_404
-        
-        dispute = get_object_or_404(Dispute, pk=pk)
-        
-        data = {
-            'id': dispute.id,
-            'reason': dispute.reason,
-            'status': dispute.status,
-            'admin_resolution': dispute.admin_resolution,
-            'created_at': dispute.created_at.isoformat(),
-            'customer': {
-                'id': dispute.customer.id if dispute.customer else None,
-                'email': dispute.customer.email if dispute.customer else '',
-                'name': f"{dispute.customer.first_name} {dispute.customer.last_name}" if dispute.customer else '',
-            },
-            'supplier': {
-                'id': dispute.supplier.id if dispute.supplier else None,
-                'email': dispute.supplier.email if dispute.supplier else '',
-                'name': f"{dispute.supplier.first_name} {dispute.supplier.last_name}" if dispute.supplier else '',
-            },
-            'order': {
-                'order_number': dispute.order.order_number if dispute.order else None,
-                'amount': float(dispute.order.final_amount) if dispute.order else 0,
-            } if dispute.order else None,
-        }
-        return Response(data)
-
-    def patch(self, request, pk):
-        from disputes.models import Dispute
-        from django.shortcuts import get_object_or_404
-        
-        dispute = get_object_or_404(Dispute, pk=pk)
-        
-        resolution = request.data.get('admin_resolution')
-        status_update = request.data.get('status')
-        
-        if resolution is not None:
-            dispute.admin_resolution = resolution
-            
-        if status_update and status_update in [s[0] for s in Dispute.Status.choices]:
-            dispute.status = status_update
-            
-        dispute.save()
-        
-        log_audit_action(
-            user=request.user,
-            action=f"Resolved dispute #{dispute.id} with status {status_update}",
-            ip_address=request.META.get('REMOTE_ADDR'),
-            content_object=dispute
-        )
-            
-        return Response({'success': True, 'message': 'Dispute updated'})

@@ -56,6 +56,8 @@ CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[
     "https://crafteg.up.railway.app",
 ])
 
+CSRF_FAILURE_VIEW = 'Handcrafts.urls.custom_csrf_failure'
+
 # Production Security
 if ENVIRONMENT != 'development':
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -102,6 +104,7 @@ LOCAL_APPS = [
     'developer_portal',
     'workflows',
     'system_admin',
+    'accounts',
 ]
 
 INSTALLED_APPS = THIRD_PARTY_APPS + DJANGO_APPS + LOCAL_APPS
@@ -132,11 +135,10 @@ MIDDLEWARE = [
 # AUTHENTICATION
 # ==============================================================================
 
-# Using default Django User model for Admin Service superusers
-# Authenticaton API flows are handled by the Auth Service
+AUTH_USER_MODEL = 'accounts.User'
 
 AUTHENTICATION_BACKENDS = [
-    'django.contrib.auth.backends.ModelBackend',
+    'accounts.backends.CaseInsensitiveModelBackend',
 ]
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -250,8 +252,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'social_django.context_processors.backends',
-                'social_django.context_processors.login_redirect',
+
             ],
         },
     },

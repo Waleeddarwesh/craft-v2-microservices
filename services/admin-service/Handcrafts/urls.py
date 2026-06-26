@@ -1,9 +1,16 @@
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.contrib import admin
-from django.urls import path,include
-from django.conf.urls.static import static
-from drf_spectacular.views import SpectacularAPIView
+from django.urls import path, include
 from rest_framework import permissions
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+from django.shortcuts import render, redirect
+from django.views.csrf import csrf_failure as default_csrf_failure
+
+def custom_csrf_failure(request, reason=""):
+    if 'logout' in request.path:
+        return redirect('/admin/login/')
+    return default_csrf_failure(request, reason=reason)
+
 from rest_framework.authentication import SessionAuthentication
 from django.conf import settings
 from django.urls import path, include, re_path
@@ -23,6 +30,7 @@ from admin_api.views import dashboard_view, sysadmin_dashboard_view
 from django.views.generic import RedirectView
 
 from django.contrib.auth import authenticate, login, logout
+from accounts.views import admin_profile_settings
 from django.shortcuts import redirect, render
 from django.http import HttpResponseForbidden
 
@@ -84,7 +92,7 @@ def check_docs_token(view_func):
 from django.contrib.auth.forms import AuthenticationForm
 
 def docs_login_view(request):
-    if request.user.is_authenticated and request.user.is_superuser:
+    if request.user.is_authenticated and getattr(request.user, 'is_team_developer', False):
         next_url = request.GET.get('next', '/docs/')
         return redirect(next_url)
 
@@ -92,7 +100,7 @@ def docs_login_view(request):
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
             user = form.get_user()
-            if user.is_superuser:
+            if getattr(user, 'is_team_developer', False):
                 login(request, user)
                 next_url = request.GET.get('next', '/docs/')
                 return redirect(next_url)
@@ -107,7 +115,37 @@ def docs_logout_view(request):
     logout(request)
     return redirect('/docs/login/')
 
+def developer_login_view(request):
+    if request.user.is_authenticated and getattr(request.user, 'is_team_developer', False):
+        next_url = request.GET.get('next', '/developer/')
+        return redirect(next_url)
+
+    if request.method == 'POST':
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+            if getattr(user, 'is_team_developer', False):
+                login(request, user)
+                next_url = request.GET.get('next', '/developer/')
+                return redirect(next_url)
+            else:
+                form.add_error(None, 'You are not authorized to access the Developer Portal.')
+    else:
+        form = AuthenticationForm()
+
+    return render(request, 'admin/developer_login.html', {'form': form})
+
+def developer_logout_view(request):
+    logout(request)
+    return redirect('/developer/login/')
+
 from django.views.generic import TemplateView
+
+# Restrict built-in Django Database Admin to DB_ADMIN and SYSADMIN roles
+def custom_admin_has_permission(request):
+    return request.user.is_active and getattr(request.user, 'is_team_db_admin', False)
+
+admin.site.has_permission = custom_admin_has_permission
 
 urlpatterns = [
     path('', include('django_prometheus.urls')),
@@ -116,6 +154,7 @@ urlpatterns = [
     path('docs/', check_docs_token(TemplateView.as_view(template_name='admin/central_docs.html')), name='schema-swagger-ui'),
     path('docs/login/', docs_login_view, name='docs-login'),
     path('docs/logout/', docs_logout_view, name='docs-logout'),
+    path('admin/profile/settings/', admin_profile_settings, name='admin_profile_settings'),
     path('admin/', admin.site.urls),
 
     # Admin API & Dashboard
@@ -130,6 +169,8 @@ urlpatterns = [
     path('api/system-admin/', include('system_admin.urls')),
     
     # Craft Developer Portal
+    path('developer/login/', developer_login_view, name='developer-login'),
+    path('developer/logout/', developer_logout_view, name='developer-logout'),
     path('developer/', include('developer_portal.urls')),
 
     path('dashboard/', dashboard_view, {'path': 'index.html'}, name='dashboard-login'),

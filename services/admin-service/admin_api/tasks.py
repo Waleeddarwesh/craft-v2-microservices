@@ -8,20 +8,31 @@ try:
     from accounts.models import Supplier, User
     from disputes.models import Dispute
     from support_tickets.models import Ticket
+    from notifications.services import create_notification_for_user
 except ImportError:
-    pass
+    # These modules belong to other microservices and are not available locally.
+    # Tasks referencing them will be no-ops until inter-service communication is wired up.
+    UserProductInteraction = None
+    Supplier = None
+    User = None
+    Dispute = None
+    Ticket = None
+    create_notification_for_user = None
 
 from audit_logs.models import AuditLog
-from notifications.services import create_notification_for_user
 
 @shared_task
 def recalculate_recommendations():
+    if UserProductInteraction is None:
+        return "Skipped: recommendations module not available in this service."
     old_date = timezone.now() - timedelta(days=30)
     UserProductInteraction.objects.filter(timestamp__lt=old_date).delete()
     return "Recommendations recalculated and stale data purged."
 
 @shared_task
 def cache_supplier_analytics():
+    if Supplier is None:
+        return "Skipped: accounts module not available in this service."
     suppliers = Supplier.objects.all()
     for supplier in suppliers:
         cache.set(f"supplier_analytics_{supplier.id}", {"cached": True}, timeout=3600)
@@ -29,6 +40,8 @@ def cache_supplier_analytics():
 
 @shared_task
 def unresolved_dispute_reminders():
+    if Dispute is None or User is None or create_notification_for_user is None:
+        return "Skipped: required modules not available in this service."
     stale_date = timezone.now() - timedelta(hours=48)
     stale_disputes = Dispute.objects.filter(status='open', created_at__lt=stale_date)
     admins = User.objects.filter(is_superuser=True)
@@ -39,6 +52,8 @@ def unresolved_dispute_reminders():
 
 @shared_task
 def stale_ticket_reminders():
+    if Ticket is None or User is None or create_notification_for_user is None:
+        return "Skipped: required modules not available in this service."
     stale_date = timezone.now() - timedelta(hours=24)
     stale_tickets = Ticket.objects.filter(status='open', created_at__lt=stale_date)
     support_agents = User.objects.filter(is_staff=True)

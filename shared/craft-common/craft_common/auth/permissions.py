@@ -7,30 +7,32 @@ logger = logging.getLogger(__name__)
 
 class HasRole(BasePermission):
     """
-    Allows access only to users with a specific role.
+    Allows access only to users with at least one of the specific roles.
     Assumes the API Gateway has validated the JWT and injected the 'X-User-Roles' header.
     """
-    def __init__(self, required_role: str):
-        self.required_role = required_role
+    def __init__(self, *required_roles: str):
+        # Store as lowercase for case-insensitive matching
+        self.required_roles = [r.lower() for r in required_roles]
 
     def has_permission(self, request, view):
         # Allow checking either X-User-Roles header (if API gateway injected)
         # OR check request.user.roles (if JWT was decoded directly by the microservice)
         roles_header = request.headers.get('X-User-Roles', '')
-        roles = [role.strip() for role in roles_header.split(',') if role.strip()]
+        roles = [role.strip().lower() for role in roles_header.split(',') if role.strip()]
         
         if not roles and hasattr(request.user, 'roles'):
-            roles = request.user.roles
+            roles = [r.lower() for r in request.user.roles]
         elif not roles and hasattr(request.user, 'payload'):
-            roles = request.user.payload.get('roles', [])
-        elif not roles and getattr(request.user, 'is_staff', False) and self.required_role == 'admin':
+            roles = [r.lower() for r in request.user.payload.get('roles', [])]
+        elif not roles and getattr(request.user, 'is_staff', False) and 'admin' in self.required_roles:
             # Fallback for real user objects in auth-service
             roles = ['admin']
             
-        if self.required_role in roles:
+        # Check if user has ANY of the required roles
+        if any(req_role in roles for req_role in self.required_roles):
             return True
             
-        logger.warning(f"Access denied for user {getattr(request.user, 'id', 'Unknown')}. Required role: {self.required_role}, Found: {roles}")
+        logger.warning(f"Access denied for user {getattr(request.user, 'id', 'Unknown')}. Required roles: {self.required_roles}, Found: {roles}")
         return False
         
     def __call__(self, *args, **kwargs):
