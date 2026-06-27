@@ -49,15 +49,21 @@ class GenericProxyView(APIView):
         auth_header = request.headers.get('Authorization', '')
         jwt_token = auth_header.split('Bearer ')[1] if 'Bearer ' in auth_header else None
         
-        # Pass query params and body
-        params = request.GET.dict()
-        json_data = request.data if request.method in ['POST', 'PUT', 'PATCH'] else None
-        
+        # Build kwargs for the client method
+        client_kwargs = {}
+        if jwt_token:
+            client_kwargs['jwt_token'] = jwt_token
+            
         method = request.method.lower()
+        if method == 'get':
+            client_kwargs['params'] = request.GET.dict()
+        elif method in ['post', 'put', 'patch']:
+            client_kwargs['json_data'] = request.data
+            
         try:
             func = getattr(self.client, method)
             # Send the request
-            res = func(path, params=params, json_data=json_data, jwt_token=jwt_token)
+            res = func(path, **client_kwargs)
             
             # Create Django HttpResponse from requests.Response
             return HttpResponse(
