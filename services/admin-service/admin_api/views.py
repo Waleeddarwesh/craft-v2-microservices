@@ -21,184 +21,54 @@ class DashboardIdentityView(APIView):
             'environment': 'Production'
         })
 
-class AdminStatsView(APIView):
-    def get(self, request):
-        # Fetch stats from downstream services via internal APIs
-        try:
-            users = auth_client.get('/internal/users/count/').json().get('count', 0)
-        except: users = 0
-        try:
-            orders = order_client.get('/internal/orders/count/').json().get('count', 0)
-        except: orders = 0
-        try:
-            revenue = payment_client.get('/internal/payments/revenue/').json().get('total', 0)
-        except: revenue = 0
-        try:
-            products = catalog_client.get('/internal/products/count/').json().get('count', 0)
-        except: products = 0
+from django.http import HttpResponse
+from rest_framework import permissions
+
+class IsSuperUser(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_superuser)
+
+class GenericProxyView(APIView):
+    # Enforce authentication and authorization for all proxied endpoints
+    permission_classes = [permissions.IsAuthenticated, IsSuperUser] 
+    
+    def __init__(self, client=None, downstream_prefix=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.client = client
+        self.downstream_prefix = downstream_prefix
+
+    def proxy_request(self, request, *args, **kwargs):
+        if not self.client:
+            return Response({'error': 'No proxy client configured'}, status=500)
+            
+        path = request.path
         
-        return Response({
-            'total_users': users,
-            'total_orders_paid': orders,
-            'total_revenue': revenue,
-            'total_products': products,
-        })
+        # Extract JWT from Authorization header
+        auth_header = request.headers.get('Authorization', '')
+        jwt_token = auth_header.split('Bearer ')[1] if 'Bearer ' in auth_header else None
+        
+        # Pass query params and body
+        params = request.GET.dict()
+        json_data = request.data if request.method in ['POST', 'PUT', 'PATCH'] else None
+        
+        method = request.method.lower()
+        try:
+            func = getattr(self.client, method)
+            # Send the request
+            res = func(path, params=params, json_data=json_data, jwt_token=jwt_token)
+            
+            # Create Django HttpResponse from requests.Response
+            return HttpResponse(
+                content=res.content,
+                status=res.status_code,
+                content_type=res.headers.get('Content-Type', 'application/json')
+            )
+        except Exception as e:
+            return Response({'error': f'Proxy error: {str(e)}'}, status=502)
 
-class AdminGlobalSearchView(APIView):
-    def get(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminGlobalSearchView GET not fully implemented yet'})
-
-class AdminChartsView(APIView):
-    def get(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminChartsView GET not fully implemented yet'})
-
-class AdminSystemReportsView(APIView):
-    def get(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminSystemReportsView GET not fully implemented yet'})
-
-class AdminSystemHealthView(APIView):
-    def get(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminSystemHealthView GET not fully implemented yet'})
-
-class AdminTopProductsView(APIView):
-    def get(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminTopProductsView GET not fully implemented yet'})
-
-class AdminRecentActivityView(APIView):
-    def get(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminRecentActivityView GET not fully implemented yet'})
-
-class AdminAuditLogsView(APIView):
-    def get(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminAuditLogsView GET not fully implemented yet'})
-
-class AdminSupplierPerformanceView(APIView):
-    def get(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminSupplierPerformanceView GET not fully implemented yet'})
-
-class AdminDeliveryPerformanceView(APIView):
-    def get(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminDeliveryPerformanceView GET not fully implemented yet'})
-
-class AdminFinancialReconciliationView(APIView):
-    def get(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminFinancialReconciliationView GET not fully implemented yet'})
-
-class AdminFraudAlertsView(APIView):
-    def get(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminFraudAlertsView GET not fully implemented yet'})
-
-class AdminFraudAlertActionView(APIView):
-    def post(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminFraudAlertActionView POST not fully implemented yet'})
-
-class AdminProductModerationView(APIView):
-    def get(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminProductModerationView GET not fully implemented yet'})
-
-class AdminProductModerationActionView(APIView):
-    def post(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminProductModerationActionView POST not fully implemented yet'})
-
-class AdminOrdersView(APIView):
-    def get(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminOrdersView GET not fully implemented yet'})
-
-class AdminOrderStatusView(APIView):
-    def post(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminOrderStatusView POST not fully implemented yet'})
-
-class AdminProductsView(APIView):
-    def get(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminProductsView GET not fully implemented yet'})
-
-class AdminReturnsView(APIView):
-    def get(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminReturnsView GET not fully implemented yet'})
-
-class AdminCoursesView(APIView):
-    def get(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminCoursesView GET not fully implemented yet'})
-
-class AdminReviewsView(APIView):
-    def get(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminReviewsView GET not fully implemented yet'})
-
-class AdminCouponsView(APIView):
-    def get(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminCouponsView GET not fully implemented yet'})
-
-class AdminTransactionsView(APIView):
-    def get(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminTransactionsView GET not fully implemented yet'})
-
-class AdminWithdrawalsListView(APIView):
-    def get(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminWithdrawalsListView GET not fully implemented yet'})
-
-class AdminPaymentsView(APIView):
-    def get(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminPaymentsView GET not fully implemented yet'})
-
-class AdminNotificationsView(APIView):
-    def get(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminNotificationsView GET not fully implemented yet'})
-
-class AdminSupportTicketsView(APIView):
-    def get(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminSupportTicketsView GET not fully implemented yet'})
-
-class AdminSupportTicketDetailView(APIView):
-    def get(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminSupportTicketDetailView GET not fully implemented yet'})
-    def post(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminSupportTicketDetailView POST not fully implemented yet'})
-
-class AdminDisputesView(APIView):
-    def get(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminDisputesView GET not fully implemented yet'})
-
-class AdminDisputeDetailView(APIView):
-    def get(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminDisputeDetailView GET not fully implemented yet'})
-    def post(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminDisputeDetailView POST not fully implemented yet'})
-
-class AdminUsersView(APIView):
-    def get(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminUsersView GET not fully implemented yet'})
-
-class AdminUserDetailView(APIView):
-    def get(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminUserDetailView GET not fully implemented yet'})
-    def put(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminUserDetailView PUT not fully implemented yet'})
-
-class AdminUserToggleView(APIView):
-    def post(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminUserToggleView POST not fully implemented yet'})
-
-class AdminSupplierApprovalView(APIView):
-    def post(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminSupplierApprovalView POST not fully implemented yet'})
-
-class AdminDeliveryApprovalView(APIView):
-    def post(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminDeliveryApprovalView POST not fully implemented yet'})
-
-class AdminSendNotificationView(APIView):
-    def post(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminSendNotificationView POST not fully implemented yet'})
-
-class AdminReturnActionView(APIView):
-    def post(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminReturnActionView POST not fully implemented yet'})
-
-class AdminWithdrawalActionView(APIView):
-    def post(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminWithdrawalActionView POST not fully implemented yet'})
-
-class AdminReviewModerationView(APIView):
-    def post(self, request, *args, **kwargs):
-        return Response({'message': 'Proxied AdminReviewModerationView POST not fully implemented yet'})
+    def get(self, request, *args, **kwargs): return self.proxy_request(request, *args, **kwargs)
+    def post(self, request, *args, **kwargs): return self.proxy_request(request, *args, **kwargs)
+    def put(self, request, *args, **kwargs): return self.proxy_request(request, *args, **kwargs)
+    def patch(self, request, *args, **kwargs): return self.proxy_request(request, *args, **kwargs)
+    def delete(self, request, *args, **kwargs): return self.proxy_request(request, *args, **kwargs)
 
