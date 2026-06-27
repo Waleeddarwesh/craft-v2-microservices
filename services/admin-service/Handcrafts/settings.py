@@ -57,6 +57,8 @@ CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[
     "https://crafteg.up.railway.app",
 ])
 
+CSRF_COOKIE_NAME = 'admin_csrftoken'
+SESSION_COOKIE_NAME = 'admin_sessionid'
 CSRF_FAILURE_VIEW = 'Handcrafts.urls.custom_csrf_failure'
 
 # Production Security
